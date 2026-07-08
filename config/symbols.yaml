@@ -1,0 +1,39 @@
+symbols:
+  - name: XAUUSD(Gold)
+    enabled: true
+    asset: gold
+    pip_size: 0.10
+    trading_days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+
+  - name: BTCUSD(crypto)
+    enabled: true
+    asset: crypto
+    pip_size: 1.0
+    trading_days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+      - Friday
+      - Saturday
+      - Sunday
+
+  - name: EURUSD(forex)
+    enabled: true
+    asset: forex
+
+  - name: USDJPY(forex)
+    enabled: true
+    asset: forex
+
+  - name: USDCAD(forex)
+    enabled: true
+    asset: forex
+
+  - name: AUDUSD(forex)
+    enabled: true
+    asset: forex
