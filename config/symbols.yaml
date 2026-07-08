@@ -25,15 +25,35 @@ symbols:
   - name: EURUSD(forex)
     enabled: true
     asset: forex
+    trading_days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
 
   - name: USDJPY(forex)
     enabled: true
     asset: forex
+    trading_days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
 
   - name: USDCAD(forex)
     enabled: true
     asset: forex
+    trading_days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
 
   - name: AUDUSD(forex)
     enabled: true
     asset: forex
+    trading_days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
