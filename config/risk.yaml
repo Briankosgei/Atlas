@@ -1,0 +1,7 @@
+risk:
+  risk_per_trade: 1.0
+  reward_ratio: 3
+  break_even_pips: 30
+  max_daily_loss: 3
+  max_weekly_loss: 8
+  max_open_trades: 2

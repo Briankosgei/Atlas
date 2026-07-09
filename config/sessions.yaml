@@ -1,0 +1,33 @@
+sessions:
+
+  forex:
+    trading_days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+
+    force_close:
+      day: Thursday
+      time: "21:00"
+
+  crypto:
+    trading_days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+      - Friday
+      - Saturday
+      - Sunday
+  
+  gold:
+    trading_days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+
+    force_close:
+      day: Thursday
+      time: "21:00"
