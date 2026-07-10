@@ -22,7 +22,15 @@ for symbol in symbols:
     print(f"\n{symbol}")
     print("-" * 60)
 
-    # Current Price
+    # Session
+    session = report["session"]
+
+    if session["allowed"]:
+        print(f"Session       : OPEN ({session['reason']})")
+    else:
+        print(f"Session       : CLOSED ({session['reason']})")
+
+    # Price
     print(f"Current Price : {report['price']:.5f}")
 
     # Trend
@@ -59,7 +67,6 @@ for symbol in symbols:
 
     # Signal
     signal = report["signal"]
-
     print(f"Signal        : {signal['signal']}")
     print(f"Signal Score  : {signal['score']}")
 
@@ -67,6 +74,7 @@ for symbol in symbols:
     for reason in signal["reasons"]:
         print(f"  ✓ {reason}")
 
+    # Trade Plan
     trade = report["trade"]
 
     if trade["valid"]:
@@ -80,5 +88,21 @@ for symbol in symbols:
     else:
         print()
         print(f"Trade Plan    : {trade['reason']}")
+
+    # Risk Management
+    risk = report["risk"]
+
+    if risk["approved"]:
+        position = risk["position"]
+
+        print()
+        print("Risk Management")
+        print(f"Balance       : ${position['balance']}")
+        print(f"Risk          : {position['risk_percent']}%")
+        print(f"Risk Amount   : ${position['risk_amount']}")
+        print(f"Lot Size      : {position['lot_size']}")
+    else:
+        print()
+        print("Risk Management: Trade rejected")
 
     print("-" * 60)
