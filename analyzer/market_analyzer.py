@@ -9,6 +9,7 @@ from analyzer.liquidity import LiquidityDetector
 from analyzer.momentum import MomentumDetector
 from analyzer.confidence import ConfidenceEngine
 from signals.signal_engine import SignalEngine
+from planner.trade_planner import TradePlanner
 
 
 class MarketAnalyzer:
@@ -25,6 +26,7 @@ class MarketAnalyzer:
         self.momentum = MomentumDetector()
         self.confidence = ConfidenceEngine()
         self.signal_engine = SignalEngine()
+        self.trade_planner = TradePlanner()
 
     def analyze(self, symbol):
 
@@ -39,7 +41,7 @@ class MarketAnalyzer:
         bos = self.bos.detect(classified)
 
         choch = self.choch.detect(classified)
-        
+
         liquidity = self.liquidity.detect(
             candles,
             classified
@@ -63,6 +65,12 @@ class MarketAnalyzer:
             momentum
         )
 
+        trade = self.trade_planner.plan(
+            symbol,
+            candles[-1]["close"],
+            signal,
+        )
+
         return {
             "symbol": symbol,
             "price": candles[-1]["close"],
@@ -74,5 +82,6 @@ class MarketAnalyzer:
             "momentum": momentum,
             "confidence": confidence,
             "signal": signal,
+            "trade": trade,
 
         }

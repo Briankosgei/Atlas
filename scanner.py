@@ -59,12 +59,26 @@ for symbol in symbols:
 
     # Signal
     signal = report["signal"]
+
     print(f"Signal        : {signal['signal']}")
     print(f"Signal Score  : {signal['score']}")
 
-    # Reasons
     print("Reasons:")
     for reason in signal["reasons"]:
         print(f"  ✓ {reason}")
+
+    trade = report["trade"]
+
+    if trade["valid"]:
+        print()
+        print("Trade Plan")
+        print(f"Direction     : {trade['direction']}")
+        print(f"Entry         : {trade['entry']}")
+        print(f"Stop Loss     : {trade['stop_loss']}")
+        print(f"Take Profit   : {trade['take_profit']}")
+        print(f"Risk Reward   : {trade['rr']}")
+    else:
+        print()
+        print(f"Trade Plan    : {trade['reason']}")
 
     print("-" * 60)
