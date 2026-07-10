@@ -33,7 +33,7 @@ class SessionManager:
         if weekday >= 4:
             return {
                 "allowed": False,
-                "reason": "Weekend filter",
+                "reason": "Weekend",
             }
 
         # Thursday after 21 UTC
