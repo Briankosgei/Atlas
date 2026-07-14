@@ -19,10 +19,23 @@ for symbol in symbols:
 
     report = analyzer.analyze(symbol)
 
+    # ---------------------------------
+    # Skip symbols with missing data
+    # ---------------------------------
+
+    if "error" in report:
+        print(f"\n{symbol}")
+        print("-" * 60)
+        print(report["error"])
+        print("-" * 60)
+        continue
+
     print(f"\n{symbol}")
     print("-" * 60)
 
-    # ---------------- Session ----------------
+    # ---------------------------------
+    # Session
+    # ---------------------------------
 
     session = report["session"]
 
@@ -31,7 +44,9 @@ for symbol in symbols:
     else:
         print(f"Session       : CLOSED ({session['reason']})")
 
-    # ---------------- Multi-Timeframe ----------------
+    # ---------------------------------
+    # Multi-Timeframe
+    # ---------------------------------
 
     print("Higher Timeframes")
 
@@ -51,16 +66,22 @@ for symbol in symbols:
     print()
     print(f"MTF Alignment : {alignment['direction']} {alignment['score']}/4")
 
-    # ---------------- Price ----------------
+    # ---------------------------------
+    # Price
+    # ---------------------------------
 
     print(f"Current Price : {report['price']:.5f}")
 
-    # ---------------- Trend ----------------
+    # ---------------------------------
+    # Trend
+    # ---------------------------------
 
     trend = report["trend"]
     print(f"Trend         : {trend['trend']} ({trend['confidence']}%)")
 
-    # ---------------- BOS ----------------
+    # ---------------------------------
+    # BOS
+    # ---------------------------------
 
     bos = report["bos"]
 
@@ -69,7 +90,9 @@ for symbol in symbols:
     else:
         print("BOS           : NO")
 
-    # ---------------- CHoCH ----------------
+    # ---------------------------------
+    # CHoCH
+    # ---------------------------------
 
     choch = report["choch"]
 
@@ -78,7 +101,9 @@ for symbol in symbols:
     else:
         print("CHoCH         : NO")
 
-    # ---------------- Liquidity ----------------
+    # ---------------------------------
+    # Liquidity
+    # ---------------------------------
 
     liquidity = report["liquidity"]
 
@@ -87,16 +112,22 @@ for symbol in symbols:
     else:
         print("Liquidity     : NO")
 
-    # ---------------- Momentum ----------------
+    # ---------------------------------
+    # Momentum
+    # ---------------------------------
 
     momentum = report["momentum"]
     print(f"Momentum      : {momentum['strength']} ({momentum['score']}%)")
 
-    # ---------------- Confidence ----------------
+    # ---------------------------------
+    # Confidence
+    # ---------------------------------
 
     print(f"Confidence    : {report['confidence']}%")
 
-    # ---------------- Signal ----------------
+    # ---------------------------------
+    # Signal
+    # ---------------------------------
 
     signal = report["signal"]
 
@@ -108,7 +139,9 @@ for symbol in symbols:
     for reason in signal["reasons"]:
         print(f"  ✓ {reason}")
 
-    # ---------------- Trade Plan ----------------
+    # ---------------------------------
+    # Trade Plan
+    # ---------------------------------
 
     trade = report["trade"]
 
@@ -127,7 +160,9 @@ for symbol in symbols:
         print()
         print(f"Trade Plan    : {trade['reason']}")
 
-    # ---------------- Risk ----------------
+    # ---------------------------------
+    # Risk Management
+    # ---------------------------------
 
     risk = report["risk"]
 

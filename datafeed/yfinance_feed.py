@@ -17,15 +17,23 @@ class YahooFinanceFeed:
 
         ticker = self.SYMBOL_MAP[symbol]
 
-        data = yf.download(
-            ticker,
-            interval=interval,
-            period="60d",
-            progress=False,
-            auto_adjust=False,
-        )
+        try:
+            data = yf.download(
+                ticker,
+                interval=interval,
+                period="60d",
+                progress=False,
+                auto_adjust=False,
+            )
+        except Exception as e:
+            print(f"Download failed for {symbol}: {e}")
+            return []
 
-        # Fix for newer yfinance versions
+        if data.empty:
+            print(f"No market data returned for {symbol}")
+            return []
+
+        # Fix newer yfinance versions
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = data.columns.get_level_values(0)
 
@@ -34,6 +42,10 @@ class YahooFinanceFeed:
         candles = []
 
         for _, row in data.iterrows():
+
+            if pd.isna(row["Open"]):
+                continue
+
             candles.append({
                 "open": float(row["Open"]),
                 "high": float(row["High"]),
@@ -44,5 +56,10 @@ class YahooFinanceFeed:
         return candles
 
     def get_price(self, symbol):
+
         candles = self.get_candles(symbol, limit=1)
+
+        if not candles:
+            return None
+
         return candles[-1]["close"]
