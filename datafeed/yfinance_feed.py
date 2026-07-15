@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import yfinance as yf
 
@@ -13,11 +14,40 @@ class YahooFinanceFeed:
         "AUDUSD": "AUDUSD=X",
     }
 
+    # ---------------------------------
+    # Cache Settings
+    # ---------------------------------
+
+    CACHE = {}
+    CACHE_TTL = 60  # seconds
+
     def get_candles(self, symbol, interval="1h", limit=500):
+
+        if symbol not in self.SYMBOL_MAP:
+            print(f"Unknown symbol: {symbol}")
+            return []
+
+        cache_key = f"{symbol}_{interval}"
+
+        # ---------------------------------
+        # Return Cached Data
+        # ---------------------------------
+
+        if cache_key in self.CACHE:
+
+            timestamp, candles = self.CACHE[cache_key]
+
+            if time.time() - timestamp < self.CACHE_TTL:
+                return candles[-limit:]
 
         ticker = self.SYMBOL_MAP[symbol]
 
+        # ---------------------------------
+        # Download Fresh Data
+        # ---------------------------------
+
         try:
+
             data = yf.download(
                 ticker,
                 interval=interval,
@@ -25,15 +55,21 @@ class YahooFinanceFeed:
                 progress=False,
                 auto_adjust=False,
             )
+
         except Exception as e:
+
             print(f"Download failed for {symbol}: {e}")
             return []
 
         if data.empty:
+
             print(f"No market data returned for {symbol}")
             return []
 
+        # ---------------------------------
         # Fix newer yfinance versions
+        # ---------------------------------
+
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = data.columns.get_level_values(0)
 
@@ -53,6 +89,15 @@ class YahooFinanceFeed:
                 "close": float(row["Close"]),
             })
 
+        # ---------------------------------
+        # Save to Cache
+        # ---------------------------------
+
+        self.CACHE[cache_key] = (
+            time.time(),
+            candles,
+        )
+
         return candles
 
     def get_price(self, symbol):
@@ -63,3 +108,7 @@ class YahooFinanceFeed:
             return None
 
         return candles[-1]["close"]
+
+    def clear_cache(self):
+
+        self.CACHE.clear()

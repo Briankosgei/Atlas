@@ -57,118 +57,135 @@ class MarketAnalyzer:
 
         session = self.session.is_market_open(symbol)
 
-        # ---------------------------------
-        # Load Market Data
-        # ---------------------------------
+        try:
 
-        candles = self.feed.get_candles(symbol)
+            # ---------------------------------
+            # Load Market Data
+            # ---------------------------------
 
-        # Prevent crashes when Yahoo returns no data
-        if not candles:
+            candles = self.feed.get_candles(symbol)
+
+            if not candles:
+
+                return {
+                    "symbol": symbol,
+                    "error": f"No market data available for {symbol}",
+                    "session": session,
+                }
+
+            # ---------------------------------
+            # Structure Analysis
+            # ---------------------------------
+
+            swings = self.swing_detector.find_swings(candles)
+            structure = self.classifier.classify(swings)
+
+            # ---------------------------------
+            # Market Analysis
+            # ---------------------------------
+
+            trend = self.trend.detect_trend(structure)
+
+            bos = self.bos.detect(structure)
+
+            choch = self.choch.detect(structure)
+
+            liquidity = self.liquidity.detect(
+                candles,
+                structure,
+            )
+
+            momentum = self.momentum.detect(candles)
+
+            confidence = self.confidence.calculate(
+                trend,
+                bos,
+                choch,
+                liquidity,
+                momentum,
+            )
+
+            # ---------------------------------
+            # Multi-Timeframe
+            # ---------------------------------
+
+            mtf = self.multi_timeframe.analyze(symbol)
+
+            alignment = self.mtf_filter.check(mtf)
+
+            # ---------------------------------
+            # Signal
+            # ---------------------------------
+
+            signal = self.signal_engine.generate(
+                trend,
+                bos,
+                choch,
+                liquidity,
+                momentum,
+                alignment,
+            )
+
+            # ---------------------------------
+            # Trade Planning
+            # ---------------------------------
+
+            current_price = candles[-1]["close"]
+
+            trade = self.trade_planner.plan(
+                symbol,
+                current_price,
+                signal,
+            )
+
+            # ---------------------------------
+            # Risk
+            # ---------------------------------
+
+            risk = self.risk_manager.evaluate(
+                symbol,
+                trade,
+            )
+
+            # ---------------------------------
+            # Return Full Report
+            # ---------------------------------
+
             return {
+
                 "symbol": symbol,
-                "error": f"No market data available for {symbol}",
+
+                "price": current_price,
+
+                # Session
                 "session": session,
+
+                # Multi Timeframe
+                "mtf": mtf,
+                "alignment": alignment,
+
+                # Analysis
+                "trend": trend,
+                "bos": bos,
+                "choch": choch,
+                "structure": structure,
+                "liquidity": liquidity,
+                "momentum": momentum,
+                "confidence": confidence,
+
+                # Trading
+                "signal": signal,
+                "trade": trade,
+                "risk": risk,
             }
 
-        # ---------------------------------
-        # Structure Analysis
-        # ---------------------------------
+        except Exception as e:
 
-        swings = self.swing_detector.find_swings(candles)
-        structure = self.classifier.classify(swings)
+            return {
 
-        # ---------------------------------
-        # Market Analysis
-        # ---------------------------------
+                "symbol": symbol,
 
-        trend = self.trend.detect_trend(structure)
-        bos = self.bos.detect(structure)
-        choch = self.choch.detect(structure)
+                "error": str(e),
 
-        liquidity = self.liquidity.detect(
-            candles,
-            structure,
-        )
-
-        momentum = self.momentum.detect(candles)
-
-        confidence = self.confidence.calculate(
-            trend,
-            bos,
-            choch,
-            liquidity,
-            momentum,
-        )
-
-        # ---------------------------------
-        # Multi-Timeframe Analysis
-        # ---------------------------------
-
-        mtf = self.multi_timeframe.analyze(symbol)
-        alignment = self.mtf_filter.check(mtf)
-
-        # ---------------------------------
-        # Signal Generation
-        # ---------------------------------
-
-        signal = self.signal_engine.generate(
-            trend,
-            bos,
-            choch,
-            liquidity,
-            momentum,
-            alignment,
-        )
-
-        # ---------------------------------
-        # Trade Planning
-        # ---------------------------------
-
-        current_price = candles[-1]["close"]
-
-        trade = self.trade_planner.plan(
-            symbol,
-            current_price,
-            signal,
-        )
-
-        # ---------------------------------
-        # Risk Management
-        # ---------------------------------
-
-        risk = self.risk_manager.evaluate(
-            symbol,
-            trade,
-        )
-
-        # ---------------------------------
-        # Return Report
-        # ---------------------------------
-
-        return {
-
-            "symbol": symbol,
-            "price": current_price,
-
-            # Session
-            "session": session,
-
-            # Higher Timeframes
-            "mtf": mtf,
-            "alignment": alignment,
-
-            # Market Analysis
-            "trend": trend,
-            "bos": bos,
-            "choch": choch,
-            "structure": structure,
-            "liquidity": liquidity,
-            "momentum": momentum,
-            "confidence": confidence,
-
-            # Trading
-            "signal": signal,
-            "trade": trade,
-            "risk": risk,
-        }
+                "session": session,
+            }
