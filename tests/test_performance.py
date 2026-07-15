@@ -1,4 +1,4 @@
-from analytics.performance import PerformanceAnalyzer
+from stats.performance import PerformanceAnalyzer
 
 performance = PerformanceAnalyzer()
 
