@@ -1,4 +1,5 @@
 from analyzer.market_analyzer import MarketAnalyzer
+from journal.trade_journal import TradeJournal
 
 symbols = [
     "XAUUSD",
@@ -10,6 +11,7 @@ symbols = [
 ]
 
 analyzer = MarketAnalyzer()
+journal = TradeJournal()
 
 print("\n" + "=" * 60)
 print("              ATLASTRADER MARKET SCAN")
@@ -45,7 +47,7 @@ for symbol in symbols:
         print(f"Session       : CLOSED ({session['reason']})")
 
     # ---------------------------------
-    # Multi-Timeframe
+    # Higher Timeframes
     # ---------------------------------
 
     print("Higher Timeframes")
@@ -161,7 +163,7 @@ for symbol in symbols:
         print(f"Trade Plan    : {trade['reason']}")
 
     # ---------------------------------
-    # Risk Management
+    # Risk
     # ---------------------------------
 
     risk = report["risk"]
@@ -176,6 +178,15 @@ for symbol in symbols:
         print(f"Risk          : {position['risk_percent']}%")
         print(f"Risk Amount   : ${position['risk_amount']}")
         print(f"Lot Size      : {position['lot_size']}")
+
+        # ---------------------------------
+        # Save trade to journal
+        # ---------------------------------
+
+        journal.save(report)
+
+        print()
+        print("Journal       : Trade saved")
 
     else:
 
