@@ -1,181 +1,251 @@
 import sys
 import os
-
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, PROJECT_ROOT)
+import time
+from datetime import datetime
 
 import streamlit as st
-import pandas as pd
-import plotly.express as px
+
+PROJECT_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..")
+)
+sys.path.insert(0, PROJECT_ROOT)
+
+from dashboard.styles import load_css
+from dashboard.components import (
+    signal_badge,
+    show_metrics,
+    show_best_trade,
+)
+from dashboard.tables import (
+    show_signal_summary,
+    show_trade_journal,
+)
+from dashboard.charts import show_performance_charts
 
 from stats.performance import PerformanceAnalyzer
+from analyzer.market_analyzer import MarketAnalyzer
 
-# ==========================================================
 # PAGE CONFIG
-# ==========================================================
-
 st.set_page_config(
-    page_title="AtlasTrader Dashboard",
+    page_title="AtlasTrader v1.0",
     page_icon="📈",
     layout="wide",
 )
 
-st.title("📈 AtlasTrader Dashboard")
+load_css()
 
-# ==========================================================
-# PERFORMANCE
-# ==========================================================
+# SIDEBAR
 
+st.sidebar.title("⚙ AtlasTrader Control Panel")
+
+selected_symbol = st.sidebar.selectbox(
+    "Market",
+    [
+        "ALL",
+        "XAUUSD",
+        "BTCUSD",
+        "EURUSD",
+        "USDJPY",
+        "USDCAD",
+        "AUDUSD",
+    ],
+)
+
+st.sidebar.divider()
+
+refresh = st.sidebar.checkbox(
+    "Auto Refresh",
+    value=False,
+)
+
+refresh_time = st.sidebar.slider(
+    "Refresh every (seconds)",
+    5,
+    120,
+    30,
+)
+
+st.sidebar.divider()
+
+highlight_best_trade = st.sidebar.checkbox(
+    "Highlight Best Signal",
+    value=True,
+)
+
+show_journal = st.sidebar.checkbox(
+    "Show Trade Journal",
+    value=True,
+)
+
+show_charts = st.sidebar.checkbox(
+    "Show Analytics",
+    value=True,
+)
+
+st.sidebar.divider()
+
+st.sidebar.subheader("AtlasTrader")
+
+st.sidebar.success("Version 1.0 RC")
+
+st.sidebar.caption("Data Feed")
+st.sidebar.write("Yahoo Finance")
+
+st.sidebar.caption("Execution")
+st.sidebar.write("Manual Trading")
+
+st.sidebar.caption("Developer")
+st.sidebar.write("Brian Kiplagat")
+
+# TITLE
+st.markdown("""
+# 📈 AtlasTrader v1.0
+
+### Professional Forex Market Scanner
+
+---
+""")
+
+st.caption(
+    f"Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+)
+
+# LOAD DATA
 performance = PerformanceAnalyzer()
 stats = performance.summary()
 
-# ==========================================================
-# LOAD JOURNAL
-# ==========================================================
+show_metrics(stats)
 
-journal_file = os.path.join(PROJECT_ROOT, "journal", "trades.csv")
+st.markdown("---")
 
-if os.path.exists(journal_file):
-    df = pd.read_csv(journal_file)
-else:
-    df = pd.DataFrame()
+analyzer = MarketAnalyzer()
 
-# ==========================================================
-# METRICS
-# ==========================================================
+ALL_SYMBOLS = [
+    "XAUUSD",
+    "BTCUSD",
+    "EURUSD",
+    "USDJPY",
+    "USDCAD",
+    "AUDUSD",
+]
 
-if stats:
+symbols = (
+    ALL_SYMBOLS
+    if selected_symbol == "ALL"
+    else [selected_symbol]
+)
 
-    col1, col2, col3, col4 = st.columns(4)
+# LIVE MARKET
+st.markdown("""
+# 📊 Live Market Scanner
 
-    col1.metric(
-        "Total Trades",
-        stats["total_trades"],
-    )
+Live multi-timeframe market analysis
 
-    col2.metric(
-        "BUY Trades",
-        stats["buy_trades"],
-    )
+---
+""")
 
-    col3.metric(
-        "SELL Trades",
-        stats["sell_trades"],
-    )
+scan_results = []
 
-    col4.metric(
-        "Avg Confidence",
-        f"{stats['average_confidence']}%",
-    )
+cols = st.columns(3)
 
-# ==========================================================
-# TRADE ANALYTICS
-# ==========================================================
+for i, symbol in enumerate(symbols):
 
-st.divider()
+    report = analyzer.analyze(symbol)
 
-st.header("📊 Trade Analytics")
+    if "error" in report:
+        continue
 
-if not df.empty:
+    scan_results.append(report)
 
-    # -------------------------
-    # Pie + Histogram
-    # -------------------------
+    trend = report["trend"]["trend"]
+    confidence = report["confidence"]
+    alignment = report["alignment"]["direction"]
+    signal = report["signal"]["signal"]
 
-    col1, col2 = st.columns(2)
+    with cols[i % 3]:
 
-    with col1:
+        st.markdown(f"""
+### {symbol}
 
-        fig = px.pie(
-            df,
-            names="signal",
-            title="BUY vs SELL Distribution",
-            hole=0.45,
+## {signal_badge(signal)}
+""")
+
+        st.progress(confidence / 100)
+
+        c1, c2 = st.columns(2)
+
+        c1.metric(
+            "Trend",
+            trend,
         )
 
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
+        c2.metric(
+            "Confidence",
+            f"{confidence}%",
         )
 
-    with col2:
+        if alignment == "BUY":
+            st.success("Higher TF : BUY")
+        elif alignment == "SELL":
+            st.error("Higher TF : SELL")
+        else:
+            st.warning("Higher TF : WAIT")
 
-        fig = px.histogram(
-            df,
-            x="confidence",
-            nbins=10,
-            title="Confidence Distribution",
-        )
+        if report["trade"]["valid"]:
 
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-        )
+            trade = report["trade"]
 
-    # -------------------------
-    # Trades Per Symbol
-    # -------------------------
+            st.caption(
+                f"""
+Entry: {trade['entry']}
 
-    st.subheader("Trades by Symbol")
+SL: {trade['stop_loss']}
 
-    symbol_counts = (
-        df.groupby("symbol")
-        .size()
-        .reset_index(name="Trades")
+TP: {trade['take_profit']}
+"""
+            )
+
+        st.markdown("---")
+
+# BEST TRADE
+if highlight_best_trade and scan_results:
+
+    st.markdown("---")
+
+    show_best_trade(scan_results)
+
+# SIGNAL SUMMARY
+show_signal_summary(scan_results)
+
+# JOURNAL
+
+journal_file = os.path.join(
+    PROJECT_ROOT,
+    "journal",
+    "trades.csv",
+)
+
+df = None
+
+if show_journal:
+
+    df = show_trade_journal(
+        journal_file
     )
 
-    fig = px.bar(
-        symbol_counts,
-        x="symbol",
-        y="Trades",
-        title="Most Traded Symbols",
-    )
+# ANALYTICS
+if (
+    show_charts
+    and df is not None
+    and not df.empty
+):
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True,
-    )
+    show_performance_charts(df)
 
-    # -------------------------
-    # Higher Timeframe Alignment
-    # -------------------------
+# AUTO REFRESH
 
-    st.subheader("Higher Timeframe Alignment")
+if refresh:
 
-    alignment_counts = (
-        df.groupby("alignment")
-        .size()
-        .reset_index(name="Count")
-    )
+    time.sleep(refresh_time)
 
-    fig = px.bar(
-        alignment_counts,
-        x="alignment",
-        y="Count",
-        title="Alignment Statistics",
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True,
-    )
-
-# ==========================================================
-# TRADE JOURNAL
-# ==========================================================
-
-st.divider()
-
-st.header("📋 Trade Journal")
-
-if not df.empty:
-
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-    )
-
-else:
-
-    st.info("No journal entries yet.")
+    st.rerun()
