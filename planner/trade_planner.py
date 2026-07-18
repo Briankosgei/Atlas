@@ -17,6 +17,14 @@ class TradePlanner:
         entry,
         candles,
     ):
+
+        # Reject invalid directions
+        if direction not in ["BUY", "SELL"]:
+            return {
+                "valid": False,
+                "reason": "No valid trading signal",
+            }
+
         atr = ATRCalculator().calculate(candles)["atr"]
 
         risk = atr * self.atr_multiplier
@@ -26,28 +34,24 @@ class TradePlanner:
             stop_loss = entry - risk
 
             take_profit = (
-                entry +
-                (risk * self.risk_reward)
+                entry
+                + (risk * self.risk_reward)
             )
 
-        elif direction == "SELL":
+        else:  # SELL
 
             stop_loss = entry + risk
 
             take_profit = (
-                entry -
-                (risk * self.risk_reward)
+                entry
+                - (risk * self.risk_reward)
             )
-
-        else:
-
-            return {
-                "valid": False
-            }
 
         return {
 
             "valid": True,
+
+            "reason": "ATR-based trade generated",
 
             "direction": direction,
 
