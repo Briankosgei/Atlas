@@ -51,18 +51,12 @@ class MarketAnalyzer:
 
     def analyze(self, symbol):
 
-        # ---------------------------------
         # Session Check
-        # ---------------------------------
-
         session = self.session.is_market_open(symbol)
 
         try:
 
-            # ---------------------------------
             # Load Market Data
-            # ---------------------------------
-
             candles = self.feed.get_candles(symbol)
 
             if not candles:
@@ -73,17 +67,11 @@ class MarketAnalyzer:
                     "session": session,
                 }
 
-            # ---------------------------------
             # Structure Analysis
-            # ---------------------------------
-
             swings = self.swing_detector.find_swings(candles)
             structure = self.classifier.classify(swings)
 
-            # ---------------------------------
             # Market Analysis
-            # ---------------------------------
-
             trend = self.trend.detect_trend(structure)
 
             bos = self.bos.detect(structure)
@@ -105,18 +93,12 @@ class MarketAnalyzer:
                 momentum,
             )
 
-            # ---------------------------------
             # Multi-Timeframe
-            # ---------------------------------
-
             mtf = self.multi_timeframe.analyze(symbol)
 
             alignment = self.mtf_filter.check(mtf)
 
-            # ---------------------------------
             # Signal
-            # ---------------------------------
-
             signal = self.signal_engine.generate(
                 trend,
                 bos,
@@ -126,31 +108,22 @@ class MarketAnalyzer:
                 alignment,
             )
 
-            # ---------------------------------
             # Trade Planning
-            # ---------------------------------
-
             current_price = candles[-1]["close"]
 
-            trade = self.trade_planner.plan(
-                symbol,
-                current_price,
-                signal,
+            trade = self.trade_planner.plan_trade(
+                direction=signal["signal"],
+                entry=current_price,
+                candles=candles,
             )
 
-            # ---------------------------------
-            # Risk
-            # ---------------------------------
-
+            # Risk Management
             risk = self.risk_manager.evaluate(
                 symbol,
                 trade,
             )
 
-            # ---------------------------------
             # Return Full Report
-            # ---------------------------------
-
             return {
 
                 "symbol": symbol,

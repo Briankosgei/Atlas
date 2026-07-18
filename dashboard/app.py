@@ -153,6 +153,7 @@ for i, symbol in enumerate(symbols):
     report = analyzer.analyze(symbol)
 
     if "error" in report:
+        st.error(f"{symbol}: {report['error']}")
         continue
 
     scan_results.append(report)
@@ -197,15 +198,14 @@ for i, symbol in enumerate(symbols):
 
             st.caption(
                 f"""
-Entry: {trade['entry']}
-
-SL: {trade['stop_loss']}
-
-TP: {trade['take_profit']}
-"""
+            ATR: {trade['atr']}
+            Entry: {trade['entry']}
+            Risk Distance: {trade['risk_distance']}
+            SL: {trade['stop_loss']}
+            TP: {trade['take_profit']}
+            RR: 1:{trade['rr']}
+            """
             )
-
-        st.markdown("---")
 
 # BEST TRADE
 if highlight_best_trade and scan_results:
@@ -249,3 +249,5 @@ if refresh:
     time.sleep(refresh_time)
 
     st.rerun()
+
+    

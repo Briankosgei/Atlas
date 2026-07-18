@@ -1,46 +1,65 @@
+from analyzer.atr import ATRCalculator
+
+
 class TradePlanner:
 
-    def __init__(self):
-        self.rr = 3.0
+    def __init__(
+        self,
+        atr_multiplier=1.5,
+        risk_reward=3.0,
+    ):
+        self.atr_multiplier = atr_multiplier
+        self.risk_reward = risk_reward
 
-    def plan(self, symbol, price, signal):
+    def plan_trade(
+        self,
+        direction,
+        entry,
+        candles,
+    ):
+        atr = ATRCalculator().calculate(candles)["atr"]
 
-        if signal["signal"] == "WAIT":
-            return {
-                "valid": False,
-                "reason": "No trading signal"
-            }
-
-        direction = signal["signal"]
-
-        # Default stop distances
-        stop_distances = {
-            "XAUUSD": 10.0,
-            "BTCUSD": 500.0,
-            "EURUSD": 0.0050,
-            "USDJPY": 0.50,
-            "USDCAD": 0.0050,
-            "AUDUSD": 0.0050,
-        }
-
-        sl_distance = stop_distances.get(symbol, 0.0050)
+        risk = atr * self.atr_multiplier
 
         if direction == "BUY":
-            entry = price
-            stop = price - sl_distance
-            take = price + (sl_distance * self.rr)
+
+            stop_loss = entry - risk
+
+            take_profit = (
+                entry +
+                (risk * self.risk_reward)
+            )
+
+        elif direction == "SELL":
+
+            stop_loss = entry + risk
+
+            take_profit = (
+                entry -
+                (risk * self.risk_reward)
+            )
 
         else:
-            entry = price
-            stop = price + sl_distance
-            take = price - (sl_distance * self.rr)
+
+            return {
+                "valid": False
+            }
 
         return {
+
             "valid": True,
-            "symbol": symbol,
+
             "direction": direction,
-            "entry": round(entry, 5),
-            "stop_loss": round(stop, 5),
-            "take_profit": round(take, 5),
-            "rr": f"1:{int(self.rr)}",
+
+            "entry": round(entry, 2),
+
+            "stop_loss": round(stop_loss, 2),
+
+            "take_profit": round(take_profit, 2),
+
+            "atr": round(atr, 2),
+
+            "risk_distance": round(risk, 2),
+
+            "rr": self.risk_reward,
         }
