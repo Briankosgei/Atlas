@@ -1,31 +1,34 @@
 class BOSDetector:
     """
-    Detects a simple Break of Structure (BOS).
+    Detect Break of Structure.
     """
 
-    def detect(self, classified_swings):
+    def detect(self, structure):
 
-        if len(classified_swings) < 2:
+        if len(structure) < 2:
+
             return {
                 "bos": False,
-                "direction": None
+                "direction": None,
             }
 
-        last = classified_swings[-1]["label"]
+        last = structure[-1]
 
-        if last == "HH":
+        if last["label"] == "HH":
+
             return {
                 "bos": True,
-                "direction": "BULLISH"
+                "direction": "BUY",
             }
 
-        if last == "LL":
+        if last["label"] == "LL":
+
             return {
                 "bos": True,
-                "direction": "BEARISH"
+                "direction": "SELL",
             }
 
         return {
             "bos": False,
-            "direction": None
+            "direction": None,
         }

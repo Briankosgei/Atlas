@@ -7,104 +7,70 @@ class SignalEngine:
         choch,
         liquidity,
         momentum,
-        mtf_alignment,
+        alignment,
     ):
 
         reasons = []
+
         score = 0
 
-        # ---------------- Trend ----------------
+        signal = "WAIT"
 
-        if trend["trend"] == "BULLISH":
-            score += 1
-            reasons.append("Bullish trend")
+        if trend["trend"] == "UPTREND":
 
-        elif trend["trend"] == "BEARISH":
-            score -= 1
-            reasons.append("Bearish trend")
+            score += 25
 
-        # ---------------- BOS ----------------
+            reasons.append("Uptrend")
+
+        elif trend["trend"] == "DOWNTREND":
+
+            score += 25
+
+            reasons.append("Downtrend")
 
         if bos["bos"]:
 
-            if bos["direction"] == "BULLISH":
-                score += 2
-                reasons.append("Bullish BOS")
-            else:
-                score -= 2
-                reasons.append("Bearish BOS")
+            score += 20
 
-        # ---------------- CHoCH ----------------
+            reasons.append("Break of Structure")
 
         if choch["choch"]:
 
-            if choch["direction"] == "BULLISH":
-                score += 1
-                reasons.append("Bullish CHoCH")
-            else:
-                score -= 1
-                reasons.append("Bearish CHoCH")
+            score += 15
 
-        # ---------------- Liquidity ----------------
+            reasons.append("Change of Character")
 
-        if liquidity["liquidity"]:
+        if liquidity["sweep"]:
 
-            if liquidity["direction"] == "BULLISH":
-                score += 2
-                reasons.append("Bullish liquidity sweep")
-            else:
-                score -= 2
-                reasons.append("Bearish liquidity sweep")
+            score += 10
 
-        # ---------------- Momentum ----------------
+            reasons.append("Liquidity Sweep")
 
         if momentum["strength"] == "STRONG":
-            score *= 1.5
-            reasons.append("Strong momentum")
 
-        elif momentum["strength"] == "MODERATE":
-            score *= 1.2
-            reasons.append("Moderate momentum")
+            score += 20
 
-        # ---------------- Raw Signal ----------------
+            reasons.append("Strong Momentum")
 
-        if score >= 3:
+        if alignment["direction"] != "WAIT":
+
+            score += 10
+
+            reasons.append("Higher Timeframe Alignment")
+
+        if trend["trend"] == "UPTREND":
+
             signal = "BUY"
 
-        elif score <= -3:
+        elif trend["trend"] == "DOWNTREND":
+
             signal = "SELL"
 
-        else:
-            signal = "WAIT"
-
-        # ======================================================
-        # Higher Timeframe Filter
-        # ======================================================
-
-        if mtf_alignment["aligned"]:
-
-            if signal != "WAIT":
-
-                if signal != mtf_alignment["direction"]:
-
-                    signal = "WAIT"
-                    score = 0
-
-                    reasons.append(
-                        "Rejected by Higher Timeframe Alignment"
-                    )
-
-        else:
-
-            signal = "WAIT"
-            score = 0
-
-            reasons.append(
-                "Higher Timeframes Not Aligned"
-            )
-
         return {
+
             "signal": signal,
-            "score": round(score, 2),
+
+            "score": min(score, 100),
+
             "reasons": reasons,
         }

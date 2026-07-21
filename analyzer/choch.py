@@ -1,34 +1,34 @@
 class CHOCHDetector:
     """
-    Detects a Change of Character (CHoCH).
+    Detect Change of Character.
     """
 
-    def detect(self, classified_swings):
+    def detect(self, structure):
 
-        if len(classified_swings) < 2:
+        if len(structure) < 3:
+
             return {
                 "choch": False,
-                "direction": None
+                "direction": None,
             }
 
-        previous = classified_swings[-2]["label"]
-        current = classified_swings[-1]["label"]
+        labels = [s["label"] for s in structure[-3:]]
 
-        # Bullish → Bearish
-        if previous in ("HH", "HL") and current == "LL":
+        if "LL" in labels and "HH" in labels:
+
             return {
                 "choch": True,
-                "direction": "BEARISH"
+                "direction": "BUY",
             }
 
-        # Bearish → Bullish
-        if previous in ("LL", "LH") and current == "HH":
+        if "HH" in labels and "LL" in labels:
+
             return {
                 "choch": True,
-                "direction": "BULLISH"
+                "direction": "SELL",
             }
 
         return {
             "choch": False,
-            "direction": None
+            "direction": None,
         }

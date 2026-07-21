@@ -1,12 +1,14 @@
 from analyzer.market_structure.swings import SwingDetector
 from analyzer.market_structure.classifier import StructureClassifier
+
 from analyzer.trend import TrendEngine
 from analyzer.bos import BOSDetector
 from analyzer.choch import CHOCHDetector
 
-# --------------------------------------------------
-# Mock candle data
-# --------------------------------------------------
+
+# --------------------------------------------
+# Sample Market Data
+# --------------------------------------------
 
 candles = [
     {"high": 12, "low": 10},
@@ -20,34 +22,39 @@ candles = [
     {"high": 18, "low": 17},
 ]
 
-# --------------------------------------------------
-# Run analyzer pipeline
-# --------------------------------------------------
+# --------------------------------------------
+# Analysis Pipeline
+# --------------------------------------------
 
-swings = SwingDetector().find_swings(candles)
+swing_detector = SwingDetector()
+classifier = StructureClassifier()
 
-classified = StructureClassifier().classify(swings)
+trend_engine = TrendEngine()
+bos_detector = BOSDetector()
+choch_detector = CHOCHDetector()
 
-trend = TrendEngine().detect_trend(classified)
+swings = swing_detector.find_swings(candles)
+structure = classifier.classify(swings)
 
-bos = BOSDetector().detect(classified)
+trend = trend_engine.detect_trend(structure)
+bos = bos_detector.detect(structure)
+choch = choch_detector.detect(structure)
 
-choch = CHOCHDetector().detect(classified)
-
-# --------------------------------------------------
+# --------------------------------------------
 # Report
-# --------------------------------------------------
+# --------------------------------------------
 
-print("=" * 40)
-print("ATLASTRADER ANALYSIS")
-print("=" * 40)
+print("=" * 50)
+print("           ATLASTRADER ANALYSIS")
+print("=" * 50)
 
-print("\nMarket Structure:")
+print("\nMarket Structure")
 
-for item in classified:
-    print(
-        f"{item['label']:>5}  Price: {item['price']}"
-    )
+if structure:
+    for item in structure:
+        print(f"{item['label']:>5} | {item['price']}")
+else:
+    print("No structure detected.")
 
 print("\nTrend")
 print(trend)
@@ -57,3 +64,5 @@ print(bos)
 
 print("\nChange of Character")
 print(choch)
+
+print("\nAnalysis Complete.")

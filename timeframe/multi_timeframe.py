@@ -1,5 +1,6 @@
 from analyzer.market_structure.swings import SwingDetector
 from analyzer.market_structure.classifier import StructureClassifier
+
 from analyzer.trend import TrendEngine
 from analyzer.bos import BOSDetector
 from analyzer.choch import CHOCHDetector
@@ -7,48 +8,51 @@ from analyzer.choch import CHOCHDetector
 
 class MultiTimeframeAnalyzer:
 
-    TIMEFRAMES = [
-        "1d",
-        "4h",
-        "1h",
-        "15m",
-    ]
-
     def __init__(self, feed):
 
         self.feed = feed
 
         self.swing = SwingDetector()
         self.classifier = StructureClassifier()
+
         self.trend = TrendEngine()
         self.bos = BOSDetector()
         self.choch = CHOCHDetector()
 
+        self.timeframes = [
+            "4h",
+            "1d",
+        ]
+
     def analyze(self, symbol):
 
-        report = {}
+        results = {}
 
-        for tf in self.TIMEFRAMES:
+        for tf in self.timeframes:
 
             candles = self.feed.get_candles(
                 symbol,
                 interval=tf,
             )
 
+            if not candles:
+
+                continue
+
             swings = self.swing.find_swings(candles)
 
-            classified = self.classifier.classify(swings)
+            structure = self.classifier.classify(swings)
 
-            trend = self.trend.detect_trend(classified)
+            trend = self.trend.detect_trend(structure)
 
-            bos = self.bos.detect(classified)
+            bos = self.bos.detect(structure)
 
-            choch = self.choch.detect(classified)
+            choch = self.choch.detect(structure)
 
-            report[tf] = {
+            results[tf] = {
                 "trend": trend,
                 "bos": bos,
                 "choch": choch,
             }
 
-        return report
+        return results

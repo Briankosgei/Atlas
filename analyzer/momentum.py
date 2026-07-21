@@ -1,42 +1,34 @@
 class MomentumDetector:
-    """
-    Measures the strength of the latest candle.
-    """
 
     def detect(self, candles):
 
-        if len(candles) < 2:
-            return {
-                "strength": "UNKNOWN",
-                "score": 0
-            }
+        if len(candles) < 10:
 
-        last = candles[-1]
-
-        body = abs(last["close"] - last["open"])
-        range_size = last["high"] - last["low"]
-
-        if range_size == 0:
             return {
                 "strength": "WEAK",
-                "score": 0
+                "score": 0,
             }
 
-        ratio = body / range_size
+        close = candles[-1]["close"]
+        old = candles[-10]["close"]
 
-        if ratio > 0.70:
-            strength = "STRONG"
-            score = 100
+        change = abs(close - old)
 
-        elif ratio > 0.50:
-            strength = "MODERATE"
-            score = 70
+        if change > close * 0.02:
 
-        else:
-            strength = "WEAK"
-            score = 30
+            return {
+                "strength": "STRONG",
+                "score": 90,
+            }
+
+        if change > close * 0.01:
+
+            return {
+                "strength": "MODERATE",
+                "score": 70,
+            }
 
         return {
-            "strength": strength,
-            "score": score
+            "strength": "WEAK",
+            "score": 40,
         }

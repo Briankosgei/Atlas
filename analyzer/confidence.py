@@ -6,27 +6,30 @@ class ConfidenceEngine:
         bos,
         choch,
         liquidity,
-        momentum
+        momentum,
+        alignment,
+        volatility,
     ):
+
         score = 0
 
-        # Trend
-        if trend["trend"] != "RANGE":
+        if trend["trend"] != "SIDEWAYS":
             score += 20
 
-        # BOS
         if bos["bos"]:
             score += 20
 
-        # CHoCH
         if choch["choch"]:
-            score += 15
+            score += 10
 
-        # Liquidity
-        if liquidity["liquidity"]:
-            score += 20
+        if liquidity["sweep"]:
+            score += 10
 
-        # Momentum
-        score += int(momentum["score"] * 0.25)
+        score += momentum["score"] * 0.20
 
-        return min(score, 100)
+        score += alignment["score"] * 10
+
+        if volatility.get("trade_allowed", True):
+            score += 10
+
+        return min(round(score), 100)

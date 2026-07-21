@@ -5,7 +5,7 @@ from journal.trade_journal import TradeJournal
 from utils.logger import logger
 
 
-symbols = [
+SYMBOLS = [
     "XAUUSD",
     "BTCUSD",
     "EURUSD",
@@ -19,20 +19,13 @@ journal = TradeJournal()
 
 
 def analyze_symbol(symbol):
-    """
-    Analyze a single symbol.
-    This function runs inside a worker thread.
-    """
-
     logger.info(f"Scanning {symbol}")
 
     try:
-        report = analyzer.analyze(symbol)
-        return symbol, report
+        return symbol, analyzer.analyze(symbol)
 
     except Exception as e:
-
-        logger.exception(f"{symbol} crashed")
+        logger.exception(symbol)
 
         return symbol, {
             "symbol": symbol,
@@ -40,176 +33,205 @@ def analyze_symbol(symbol):
         }
 
 
-print("\n" + "=" * 60)
-print("              ATLASTRADER MARKET SCAN")
-print("=" * 60)
-
-# --------------------------------------------------
-# Analyze all symbols in parallel
-# --------------------------------------------------
+print("\n" + "=" * 70)
+print("                ATLASTRADER MARKET SCANNER")
+print("=" * 70)
 
 with ThreadPoolExecutor(max_workers=4) as executor:
 
     futures = [
         executor.submit(analyze_symbol, symbol)
-        for symbol in symbols
+        for symbol in SYMBOLS
     ]
 
     for future in as_completed(futures):
 
         symbol, report = future.result()
 
-        # ---------------------------------
-        # Handle Errors
-        # ---------------------------------
-
         if "error" in report:
 
-            logger.warning(f"{symbol} | {report['error']}")
-
             print(f"\n{symbol}")
-            print("-" * 60)
+            print("-" * 70)
             print(report["error"])
-            print("-" * 60)
+            print("-" * 70)
 
             continue
 
         print(f"\n{symbol}")
-        print("-" * 60)
+        print("-" * 70)
 
-        # ---------------------------------
-        # Session
-        # ---------------------------------
+        ###################################################
+        # SESSION
+        ###################################################
 
         session = report["session"]
 
-        if session["allowed"]:
-            print(f"Session       : OPEN ({session['reason']})")
-        else:
-            print(f"Session       : CLOSED ({session['reason']})")
+        status = "OPEN" if session["allowed"] else "CLOSED"
 
-        # ---------------------------------
-        # Multi-Timeframe
-        # ---------------------------------
+        print(f"Session          : {status}")
+        print(f"Reason           : {session['reason']}")
 
-        print("Higher Timeframes")
+        ###################################################
+        # PRICE
+        ###################################################
 
-        for tf, analysis in report["mtf"].items():
+        print(f"Current Price    : {report['price']}")
 
-            print(
-                f"{tf.upper():>4} | "
-                f"{analysis['trend']['trend']:<8} | "
-                f"BOS: {analysis['bos']['bos']} | "
-                f"CHoCH: {analysis['choch']['choch']}"
-            )
-
-        print("-" * 60)
-
-        alignment = report["alignment"]
-
-        print()
-        print(f"MTF Alignment : {alignment['direction']} {alignment['score']}/4")
-
-        # ---------------------------------
-        # Price
-        # ---------------------------------
-
-        print(f"Current Price : {report['price']:.5f}")
-
-        # ---------------------------------
-        # Trend
-        # ---------------------------------
+        ###################################################
+        # TREND
+        ###################################################
 
         trend = report["trend"]
-        print(f"Trend         : {trend['trend']} ({trend['confidence']}%)")
 
-        # ---------------------------------
-        # BOS
-        # ---------------------------------
+        print(
+            f"Trend            : "
+            f"{trend['trend']} "
+            f"({trend['confidence']}%)"
+        )
+
+        ###################################################
+        # BOS / CHOCH
+        ###################################################
 
         bos = report["bos"]
 
         if bos["bos"]:
-            print(f"BOS           : YES ({bos['direction']})")
+            print(f"BOS              : {bos['direction']}")
         else:
-            print("BOS           : NO")
-
-        # ---------------------------------
-        # CHoCH
-        # ---------------------------------
+            print("BOS              : None")
 
         choch = report["choch"]
 
         if choch["choch"]:
-            print(f"CHoCH         : YES ({choch['direction']})")
+            print(f"CHoCH            : {choch['direction']}")
         else:
-            print("CHoCH         : NO")
+            print("CHoCH            : None")
 
-        # ---------------------------------
-        # Liquidity
-        # ---------------------------------
+        ###################################################
+        # LIQUIDITY
+        ###################################################
 
         liquidity = report["liquidity"]
 
-        if liquidity["liquidity"]:
-            print(f"Liquidity     : YES ({liquidity['direction']})")
+        if liquidity["sweep"]:
+            print(f"Liquidity Sweep  : YES {liquidity['direction']}")
         else:
-            print("Liquidity     : NO")
+            print("Liquidity Sweep  : NO")
 
-        # ---------------------------------
-        # Momentum
-        # ---------------------------------
+        ###################################################
+        # MOMENTUM
+        ###################################################
 
         momentum = report["momentum"]
 
         print(
-            f"Momentum      : {momentum['strength']} ({momentum['score']}%)"
+            f"Momentum         : "
+            f"{momentum['strength']} "
+            f"({momentum['score']}%)"
         )
 
-        # ---------------------------------
-        # Confidence
-        # ---------------------------------
+        ###################################################
+        # VOLATILITY
+        ###################################################
 
-        print(f"Confidence    : {report['confidence']}%")
+        volatility = report["volatility"]
 
-        # ---------------------------------
-        # Signal
-        # ---------------------------------
+        print(f"ATR        : {volatility['atr']:.5f}")
+
+        status = "PASS" if volatility["tradable"] else "BLOCKED"
+
+        print(f"volatility  : {status}")
+        print(f"Reason      : {volatility['reason']}")
+
+        ###################################################
+        # MTF
+        ###################################################
+
+        alignment = report["alignment"]
+
+        print(
+            f"HTF Alignment    : "
+            f"{alignment['direction']} "
+            f"({alignment['score']}/4)"
+        )
+
+        ###################################################
+        # TREND STRENGTH
+        ###################################################
+
+        strength = report["trend_strength"]
+
+        print(
+            f"Trend Strength   : "
+            f"{strength['score']}/100"
+        )
+
+        ###################################################
+        # CONFIDENCE
+        ###################################################
+
+        print(
+            f"Confidence       : "
+            f"{report['confidence']}%"
+        )
+
+        ###################################################
+        # GRADE
+        ###################################################
+        grade = report["grade"]
+
+        print(
+            f"Signal Grade    : "
+            f"{grade['grade']} ({grade['quality']})"
+        )
+
+        ###################################################
+        # SIGNAL
+        ###################################################
 
         signal = report["signal"]
 
-        print(f"Signal        : {signal['signal']}")
-        print(f"Signal Score  : {signal['score']}")
+        print(
+            f"Signal           : "
+            f"{signal['signal']}"
+        )
+
+        print(
+            f"Signal Score     : "
+            f"{signal['score']}"
+        )
 
         print("Reasons:")
 
         for reason in signal["reasons"]:
-            print(f"  ✓ {reason}")
+            print(f"   ✓ {reason}")
 
-        # ---------------------------------
-        # Trade Plan
-        # ---------------------------------
+        ###################################################
+        # TRADE PLAN
+        ###################################################
 
         trade = report["trade"]
 
         if trade["valid"]:
 
-            print()
-            print("Trade Plan")
-            print(f"Direction     : {trade['direction']}")
-            print(f"Entry         : {trade['entry']}")
-            print(f"Stop Loss     : {trade['stop_loss']}")
-            print(f"Take Profit   : {trade['take_profit']}")
-            print(f"Risk Reward   : {trade['rr']}")
+            print("\nTrade Plan")
+
+            print(f"Direction        : {trade['direction']}")
+            print(f"Entry            : {trade['entry']}")
+            print(f"ATR              : {trade['atr']}")
+            print(f"Risk Distance    : {trade['risk_distance']}")
+            print(f"Stop Loss        : {trade['stop_loss']}")
+            print(f"Take Profit      : {trade['take_profit']}")
+            print(f"Risk Reward      : 1:{trade['rr']}")
 
         else:
 
-            print()
-            print(f"Trade Plan    : {trade['reason']}")
+            print("\nTrade Plan")
+            print("No valid setup.")
 
-        # ---------------------------------
-        # Risk Management
-        # ---------------------------------
+        ###################################################
+        # RISK
+        ###################################################
 
         risk = report["risk"]
 
@@ -217,27 +239,27 @@ with ThreadPoolExecutor(max_workers=4) as executor:
 
             position = risk["position"]
 
-            print()
-            print("Risk Management")
-            print(f"Balance       : ${position['balance']}")
-            print(f"Risk          : {position['risk_percent']}%")
-            print(f"Risk Amount   : ${position['risk_amount']}")
-            print(f"Lot Size      : {position['lot_size']}")
+            print("\nRisk Management")
+
+            print(f"Balance          : ${position['balance']}")
+            print(f"Risk             : {position['risk_percent']}%")
+            print(f"Risk Amount      : ${position['risk_amount']}")
+            print(f"Lot Size         : {position['lot_size']}")
 
             journal.save(report)
 
         else:
 
-            print()
-            print("Risk Management: Trade rejected")
+            print("\nRisk Management")
+            print("Trade Rejected")
+
+        print("-" * 70)
 
         logger.info(
             f"{symbol} | "
             f"{signal['signal']} | "
-            f"Confidence={report['confidence']}% | "
-            f"Alignment={alignment['direction']}"
+            f"Confidence={report['confidence']} | "
+            f"Grade={report['grade']}"
         )
-
-        print("-" * 60)
 
 print("\nScan Complete.\n")

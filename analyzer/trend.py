@@ -1,54 +1,72 @@
 class TrendEngine:
     """
-    Determines the market trend from classified market structure.
+    Detects market trend from classified swings.
+
+    Expected input:
+    [
+        {"type":"HIGH","price":...,"label":"HH"},
+        {"type":"LOW","price":...,"label":"HL"},
+        ...
+    ]
     """
 
-    def detect_trend(self, classified_swings):
+    def detect_trend(self, structure):
 
-        hh = 0
-        hl = 0
-        lh = 0
-        ll = 0
+        highs = [
+            s for s in structure
+            if s["type"] == "HIGH"
+        ]
 
-        for swing in classified_swings:
+        lows = [
+            s for s in structure
+            if s["type"] == "LOW"
+        ]
 
-            label = swing["label"]
-
-            if label == "HH":
-                hh += 1
-
-            elif label == "HL":
-                hl += 1
-
-            elif label == "LH":
-                lh += 1
-
-            elif label == "LL":
-                ll += 1
-
-        bullish_score = hh + hl
-        bearish_score = lh + ll
-
-        total = bullish_score + bearish_score
-
-        if total == 0:
+        if len(highs) < 2 or len(lows) < 2:
             return {
-                "trend": "RANGE",
-                "confidence": 0
+                "trend": "SIDEWAYS",
+                "confidence": 0,
             }
 
-        confidence = round(max(bullish_score, bearish_score) / total * 100)
+        last_high = highs[-1]
+        prev_high = highs[-2]
 
-        if bullish_score > bearish_score:
-            trend = "BULLISH"
+        last_low = lows[-1]
+        prev_low = lows[-2]
 
-        elif bearish_score > bullish_score:
-            trend = "BEARISH"
+        higher_high = (
+            last_high["price"] > prev_high["price"]
+            or last_high["label"] == "HH"
+        )
 
-        else:
-            trend = "RANGE"
+        lower_high = (
+            last_high["price"] < prev_high["price"]
+            or last_high["label"] == "LH"
+        )
+
+        higher_low = (
+            last_low["price"] > prev_low["price"]
+            or last_low["label"] == "HL"
+        )
+
+        lower_low = (
+            last_low["price"] < prev_low["price"]
+            or last_low["label"] == "LL"
+        )
+
+        if higher_high and higher_low:
+            return {
+                "trend": "UPTREND",
+                "confidence": 90,
+            }
+
+        if lower_high and lower_low:
+            return {
+                "trend": "DOWNTREND",
+                "confidence": 90,
+            }
 
         return {
-            "trend": trend,
-            "confidence": confidence
+            "trend": "SIDEWAYS",
+            "confidence": 50,
         }

@@ -1,50 +1,32 @@
 class LiquidityDetector:
-    """
-    Detect bullish and bearish liquidity sweeps.
 
-    Bullish sweep:
-        Current low < Previous swing low
-        AND closes above previous swing low
+    def detect(self, candles, structure):
 
-    Bearish sweep:
-        Current high > Previous swing high
-        AND closes below previous swing high
-    """
+        if len(candles) < 3:
 
-    def detect(self, candles, swings):
-
-        if len(candles) < 2:
             return {
-                "liquidity": False,
-                "direction": None
+                "sweep": False,
+                "direction": None,
             }
 
+        last = candles[-1]
         previous = candles[-2]
-        current = candles[-1]
 
-        # -------- Bullish Sweep --------
+        if last["high"] > previous["high"]:
 
-        if (
-            current["low"] < previous["low"]
-            and current["close"] > previous["low"]
-        ):
             return {
-                "liquidity": True,
-                "direction": "BULLISH"
+                "sweep": True,
+                "direction": "BUY",
             }
 
-        # -------- Bearish Sweep --------
+        if last["low"] < previous["low"]:
 
-        if (
-            current["high"] > previous["high"]
-            and current["close"] < previous["high"]
-        ):
             return {
-                "liquidity": True,
-                "direction": "BEARISH"
+                "sweep": True,
+                "direction": "SELL",
             }
 
         return {
-            "liquidity": False,
-            "direction": None
+            "sweep": False,
+            "direction": None,
         }

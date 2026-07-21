@@ -1,33 +1,49 @@
 class MTFAlignment:
+    """
+    Determines higher-timeframe alignment.
+    Works with any number of timeframes.
+    """
 
     def check(self, mtf):
 
-        trends = {
-            "1d": mtf["1d"]["trend"]["trend"],
-            "4h": mtf["4h"]["trend"]["trend"],
-            "1h": mtf["1h"]["trend"]["trend"],
-            "15m": mtf["15m"]["trend"]["trend"],
-        }
-
-        bullish = sum(t == "BULLISH" for t in trends.values())
-        bearish = sum(t == "BEARISH" for t in trends.values())
-
-        if bullish >= 3:
+        if not mtf:
             return {
-                "direction": "BUY",
-                "aligned": True,
-                "score": bullish,
+                "direction": "WAIT",
+                "score": 0,
             }
 
-        if bearish >= 3:
-            return {
-                "direction": "SELL",
-                "aligned": True,
-                "score": bearish,
-            }
+        buy = 0
+        sell = 0
+
+        for tf, analysis in mtf.items():
+
+            trend = analysis["trend"]["trend"]
+
+            if trend == "UPTREND":
+                buy += 1
+
+            elif trend == "DOWNTREND":
+                sell += 1
+
+        if buy > sell:
+
+            direction = "BUY"
+
+            score = buy
+
+        elif sell > buy:
+
+            direction = "SELL"
+
+            score = sell
+
+        else:
+
+            direction = "WAIT"
+
+            score = 0
 
         return {
-            "direction": "WAIT",
-            "aligned": False,
-            "score": max(bullish, bearish),
+            "direction": direction,
+            "score": score,
         }
