@@ -2,49 +2,63 @@ from analyzer.atr import ATRCalculator
 
 
 class VolatilityFilter:
+    """
+    Filters trades based on ATR volatility.
 
-    def __init__(
-        self,
-        minimum_atr=3,
-        maximum_atr=80,
-    ):
-        self.minimum = minimum_atr
-        self.maximum = maximum_atr
+    Each instrument has its own acceptable ATR range.
+    """
 
-    def check(self, candles):
+    LIMITS = {
+
+        # Gold
+        "XAUUSD": (5.0, 80.0),
+
+        # Bitcoin
+        "BTCUSD": (100.0, 2000.0),
+
+        # Major Forex
+        "EURUSD": (0.00030, 0.01000),
+        "AUDUSD": (0.00030, 0.01000),
+        "USDCAD": (0.00030, 0.01000),
+
+        # JPY Pair
+        "USDJPY": (0.030, 0.800),
+    }
+
+    def check(self, candles, symbol):
+        """
+        Returns whether current ATR is suitable for trading.
+        """
 
         atr = ATRCalculator().calculate(candles)["atr"]
 
-        if atr < self.minimum:
+        # Default limits if symbol isn't configured
+        minimum, maximum = self.LIMITS.get(symbol, (1.0, 100.0))
+
+        if atr < minimum:
 
             return {
-
                 "tradable": False,
-
                 "atr": atr,
-
-                "reason": "Low volatility"
-
+                "minimum": minimum,
+                "maximum": maximum,
+                "reason": "Low volatility",
             }
 
-        if atr > self.maximum:
+        if atr > maximum:
 
             return {
-
                 "tradable": False,
-
                 "atr": atr,
-
-                "reason": "Extreme volatility"
-
+                "minimum": minimum,
+                "maximum": maximum,
+                "reason": "Extreme volatility",
             }
 
         return {
-
             "tradable": True,
-
             "atr": atr,
-
-            "reason": "Normal volatility"
-
+            "minimum": minimum,
+            "maximum": maximum,
+            "reason": "Normal volatility",
         }

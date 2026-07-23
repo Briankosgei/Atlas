@@ -14,252 +14,332 @@ SYMBOLS = [
     "AUDUSD",
 ]
 
-analyzer = MarketAnalyzer()
-journal = TradeJournal()
 
+class Scanner:
 
-def analyze_symbol(symbol):
-    logger.info(f"Scanning {symbol}")
+    def __init__(self):
+        self.analyzer = MarketAnalyzer()
+        self.journal = TradeJournal()
 
-    try:
-        return symbol, analyzer.analyze(symbol)
+    ###########################################################
 
-    except Exception as e:
-        logger.exception(symbol)
+    def analyze_symbol(self, symbol):
 
-        return symbol, {
-            "symbol": symbol,
-            "error": str(e),
-        }
+        logger.info(f"Scanning {symbol}")
 
+        try:
 
-print("\n" + "=" * 70)
-print("                ATLASTRADER MARKET SCANNER")
-print("=" * 70)
+            report = self.analyzer.analyze(symbol)
 
-with ThreadPoolExecutor(max_workers=4) as executor:
+            if report is None:
 
-    futures = [
-        executor.submit(analyze_symbol, symbol)
-        for symbol in SYMBOLS
-    ]
+                logger.error(
+                    f"{symbol}: MarketAnalyzer returned None."
+                )
 
-    for future in as_completed(futures):
+                return symbol, {
+                    "symbol": symbol,
+                    "error": "MarketAnalyzer returned None.",
+                }
 
-        symbol, report = future.result()
+            if not isinstance(report, dict):
 
-        if "error" in report:
+                logger.error(
+                    f"{symbol}: Invalid report type {type(report)}"
+                )
 
-            print(f"\n{symbol}")
-            print("-" * 70)
-            print(report["error"])
-            print("-" * 70)
+                return symbol, {
+                    "symbol": symbol,
+                    "error": f"Invalid report type: {type(report)}",
+                }
 
-            continue
+            return symbol, report
+
+        except Exception as exc:
+
+            logger.exception(exc)
+
+            return symbol, {
+                "symbol": symbol,
+                "error": str(exc),
+            }
+
+    ###########################################################
+
+    def display(self, symbol, report):
 
         print(f"\n{symbol}")
         print("-" * 70)
 
-        ###################################################
-        # SESSION
-        ###################################################
+        #######################################################
+        # Validate report
+        #######################################################
 
-        session = report["session"]
+        if report is None:
 
-        status = "OPEN" if session["allowed"] else "CLOSED"
+            print("ERROR: Analyzer returned None.")
+            print("-" * 70)
+            return
 
-        print(f"Session          : {status}")
-        print(f"Reason           : {session['reason']}")
+        if not isinstance(report, dict):
 
-        ###################################################
-        # PRICE
-        ###################################################
+            print(f"ERROR: Invalid report type {type(report)}")
+            print("-" * 70)
+            return
 
-        print(f"Current Price    : {report['price']}")
+        if report.get("error"):
 
-        ###################################################
-        # TREND
-        ###################################################
+            print(report["error"])
+            print("-" * 70)
+            return
 
-        trend = report["trend"]
+        #######################################################
+        # Session
+        #######################################################
+
+        session = report.get("session", {})
+
+        print(
+            f"Session          : "
+            f"{'OPEN' if session.get('allowed', False) else 'CLOSED'}"
+        )
+
+        print(
+            f"Reason           : "
+            f"{session.get('reason','Unknown')}"
+        )
+
+        #######################################################
+        # Price
+        #######################################################
+
+        print(f"Current Price    : {report.get('price')}")
+
+        #######################################################
+        # Trend
+        #######################################################
+
+        trend = report.get("trend", {})
 
         print(
             f"Trend            : "
-            f"{trend['trend']} "
-            f"({trend['confidence']}%)"
+            f"{trend.get('trend')} "
+            f"({trend.get('confidence',0)}%)"
         )
 
-        ###################################################
-        # BOS / CHOCH
-        ###################################################
+        #######################################################
+        # BOS
+        #######################################################
 
-        bos = report["bos"]
+        bos = report.get("bos", {})
 
-        if bos["bos"]:
-            print(f"BOS              : {bos['direction']}")
+        print(
+            f"BOS              : "
+            f"{bos.get('direction') if bos.get('bos') else 'None'}"
+        )
+
+        #######################################################
+        # CHOCH
+        #######################################################
+
+        choch = report.get("choch", {})
+
+        print(
+            f"CHoCH            : "
+            f"{choch.get('direction') if choch.get('choch') else 'None'}"
+        )
+
+        #######################################################
+        # Liquidity
+        #######################################################
+
+        liquidity = report.get("liquidity", {})
+
+        if liquidity.get("sweep"):
+
+            print(
+                f"Liquidity Sweep  : YES {liquidity.get('direction')}"
+            )
+
         else:
-            print("BOS              : None")
 
-        choch = report["choch"]
-
-        if choch["choch"]:
-            print(f"CHoCH            : {choch['direction']}")
-        else:
-            print("CHoCH            : None")
-
-        ###################################################
-        # LIQUIDITY
-        ###################################################
-
-        liquidity = report["liquidity"]
-
-        if liquidity["sweep"]:
-            print(f"Liquidity Sweep  : YES {liquidity['direction']}")
-        else:
             print("Liquidity Sweep  : NO")
 
-        ###################################################
-        # MOMENTUM
-        ###################################################
+        #######################################################
+        # Momentum
+        #######################################################
 
-        momentum = report["momentum"]
+        momentum = report.get("momentum", {})
 
         print(
             f"Momentum         : "
-            f"{momentum['strength']} "
-            f"({momentum['score']}%)"
+            f"{momentum.get('strength')} "
+            f"({momentum.get('score',0)}%)"
         )
 
-        ###################################################
-        # VOLATILITY
-        ###################################################
+        #######################################################
+        # Volatility
+        #######################################################
 
-        volatility = report["volatility"]
+        volatility = report.get("volatility", {})
 
-        print(f"ATR        : {volatility['atr']:.5f}")
+        print(f"ATR              : {volatility.get('atr')}")
+        print(f"Volatility       : {volatility.get('reason')}")
 
-        status = "PASS" if volatility["tradable"] else "BLOCKED"
+        #######################################################
+        # HTF
+        #######################################################
 
-        print(f"volatility  : {status}")
-        print(f"Reason      : {volatility['reason']}")
-
-        ###################################################
-        # MTF
-        ###################################################
-
-        alignment = report["alignment"]
+        alignment = report.get("alignment", {})
 
         print(
             f"HTF Alignment    : "
-            f"{alignment['direction']} "
-            f"({alignment['score']}/4)"
+            f"{alignment.get('direction')} "
+            f"({alignment.get('confidence',0)}%)"
         )
 
-        ###################################################
-        # TREND STRENGTH
-        ###################################################
+        #######################################################
+        # Trend Strength
+        #######################################################
 
-        strength = report["trend_strength"]
+        strength = report.get("trend_strength", {})
 
         print(
             f"Trend Strength   : "
-            f"{strength['score']}/100"
+            f"{strength.get('score',0)}/100"
         )
 
-        ###################################################
-        # CONFIDENCE
-        ###################################################
+        #######################################################
+        # Confidence
+        #######################################################
+
+        confidence = report["confidence"]
+        
+        print("\nConfidence Breakdown")
+
+        for name, value in confidence["breakdown"].items():
+            print(f" {name:12}: {value}")
+        #######################################################
+        # Grade
+        #######################################################
+
+        grade = report.get("grade", {})
 
         print(
-            f"Confidence       : "
-            f"{report['confidence']}%"
+            f"Signal Grade     : "
+            f"{grade.get('grade')} "
+            f"({grade.get('quality')})"
         )
 
-        ###################################################
-        # GRADE
-        ###################################################
-        grade = report["grade"]
+        #######################################################
+        # Signal
+        #######################################################
 
-        print(
-            f"Signal Grade    : "
-            f"{grade['grade']} ({grade['quality']})"
-        )
+        signal = report.get("signal", {})
 
-        ###################################################
-        # SIGNAL
-        ###################################################
-
-        signal = report["signal"]
-
-        print(
-            f"Signal           : "
-            f"{signal['signal']}"
-        )
-
-        print(
-            f"Signal Score     : "
-            f"{signal['score']}"
-        )
+        print(f"Signal           : {signal.get('signal')}")
+        print(f"Signal Score     : {signal.get('score')}")
 
         print("Reasons:")
 
-        for reason in signal["reasons"]:
+        for reason in signal.get("reasons", []):
+
             print(f"   ✓ {reason}")
 
-        ###################################################
-        # TRADE PLAN
-        ###################################################
+        #######################################################
+        # Trade
+        #######################################################
 
-        trade = report["trade"]
+        trade = report.get("trade", {})
 
-        if trade["valid"]:
+        print("\nTrade Plan")
 
-            print("\nTrade Plan")
+        if trade.get("valid"):
 
-            print(f"Direction        : {trade['direction']}")
-            print(f"Entry            : {trade['entry']}")
-            print(f"ATR              : {trade['atr']}")
-            print(f"Risk Distance    : {trade['risk_distance']}")
-            print(f"Stop Loss        : {trade['stop_loss']}")
-            print(f"Take Profit      : {trade['take_profit']}")
-            print(f"Risk Reward      : 1:{trade['rr']}")
+            print(f"Direction        : {trade.get('direction')}")
+            print(f"Entry            : {trade.get('entry')}")
+            print(f"ATR              : {trade.get('atr')}")
+            print(f"Stop Loss        : {trade.get('stop_loss')}")
+            print(f"Take Profit      : {trade.get('take_profit')}")
+            print(f"Risk Distance    : {trade.get('risk_distance')}")
+            print(f"Risk Reward      : 1:{trade.get('rr')}")
 
         else:
 
-            print("\nTrade Plan")
             print("No valid setup.")
 
-        ###################################################
-        # RISK
-        ###################################################
+        #######################################################
+        # Risk
+        #######################################################
 
-        risk = report["risk"]
+        risk = report.get("risk", {})
 
-        if risk["approved"]:
+        print("\nRisk Management")
 
-            position = risk["position"]
+        if risk.get("approved"):
 
-            print("\nRisk Management")
+            position = risk.get("position", {})
 
-            print(f"Balance          : ${position['balance']}")
-            print(f"Risk             : {position['risk_percent']}%")
-            print(f"Risk Amount      : ${position['risk_amount']}")
-            print(f"Lot Size         : {position['lot_size']}")
+            print(f"Balance          : ${position.get('balance')}")
+            print(f"Risk             : {position.get('risk_percent')}%")
+            print(f"Risk Amount      : ${position.get('risk_amount')}")
+            print(f"Lot Size         : {position.get('lot_size')}")
 
-            journal.save(report)
+            self.journal.save(report)
 
         else:
 
-            print("\nRisk Management")
-            print("Trade Rejected")
-
-        print("-" * 70)
+            print(
+                f"Trade Rejected   : "
+                f"{risk.get('reason')}"
+            )
 
         logger.info(
             f"{symbol} | "
-            f"{signal['signal']} | "
-            f"Confidence={report['confidence']} | "
-            f"Grade={report['grade']}"
+            f"{signal.get('signal')} | "
+            f"Confidence={report.get('confidence')} | "
+            f"Grade={grade.get('grade')}"
         )
 
-print("\nScan Complete.\n")
+        print("-" * 70)
+
+    ###########################################################
+
+    def run(self):
+
+        print("\n" + "=" * 70)
+        print("                ATLASTRADER MARKET SCANNER")
+        print("=" * 70)
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+
+            futures = {
+                executor.submit(
+                    self.analyze_symbol,
+                    symbol,
+                ): symbol
+                for symbol in SYMBOLS
+            }
+
+            for future in as_completed(futures):
+
+                symbol = futures[future]
+
+                try:
+
+                    _, report = future.result()
+
+                except Exception as exc:
+
+                    report = {
+                        "error": str(exc)
+                    }
+
+                self.display(symbol, report)
+
+        print("\nScan Complete.\n")
+
+
+if __name__ == "__main__":
+
+    Scanner().run()

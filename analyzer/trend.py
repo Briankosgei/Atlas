@@ -1,72 +1,166 @@
 class TrendEngine:
     """
-    Detects market trend from classified swings.
+    AtlasTrader Trend Engine
 
-    Expected input:
-    [
-        {"type":"HIGH","price":...,"label":"HH"},
-        {"type":"LOW","price":...,"label":"HL"},
-        ...
-    ]
+    Determines market trend using market structure.
+
+    Detects:
+        • Uptrend
+        • Downtrend
+        • Sideways
+
+    Also returns:
+        • Trend confidence
+        • Trend strength
+        • Consecutive HH/HL
+        • Consecutive LH/LL
     """
+
+    def __init__(self, lookback=6):
+        self.lookback = lookback
 
     def detect_trend(self, structure):
 
-        highs = [
-            s for s in structure
-            if s["type"] == "HIGH"
-        ]
+        if not structure or len(structure) < 4:
 
-        lows = [
-            s for s in structure
-            if s["type"] == "LOW"
-        ]
-
-        if len(highs) < 2 or len(lows) < 2:
             return {
                 "trend": "SIDEWAYS",
                 "confidence": 0,
+                "strength": 0,
+                "bullish_points": 0,
+                "bearish_points": 0,
+                "bullish_sequence": 0,
+                "bearish_sequence": 0,
+                "reason": "Insufficient market structure",
             }
 
-        last_high = highs[-1]
-        prev_high = highs[-2]
+        recent = structure[-self.lookback:]
 
-        last_low = lows[-1]
-        prev_low = lows[-2]
+        bullish = 0
+        bearish = 0
 
-        higher_high = (
-            last_high["price"] > prev_high["price"]
-            or last_high["label"] == "HH"
-        )
+        bullish_sequence = 0
+        bearish_sequence = 0
 
-        lower_high = (
-            last_high["price"] < prev_high["price"]
-            or last_high["label"] == "LH"
-        )
+        max_bull_sequence = 0
+        max_bear_sequence = 0
 
-        higher_low = (
-            last_low["price"] > prev_low["price"]
-            or last_low["label"] == "HL"
-        )
+        for swing in recent:
 
-        lower_low = (
-            last_low["price"] < prev_low["price"]
-            or last_low["label"] == "LL"
-        )
+            label = swing.get("label", "")
 
-        if higher_high and higher_low:
+            ###############################################
+            # Bullish Structure
+            ###############################################
+
+            if label in ("HH", "HL"):
+
+                bullish += 1
+
+                bullish_sequence += 1
+                bearish_sequence = 0
+
+                max_bull_sequence = max(
+                    max_bull_sequence,
+                    bullish_sequence,
+                )
+
+            ###############################################
+            # Bearish Structure
+            ###############################################
+
+            elif label in ("LH", "LL"):
+
+                bearish += 1
+
+                bearish_sequence += 1
+                bullish_sequence = 0
+
+                max_bear_sequence = max(
+                    max_bear_sequence,
+                    bearish_sequence,
+                )
+
+        total = bullish + bearish
+
+        if total == 0:
+
             return {
-                "trend": "UPTREND",
-                "confidence": 90,
+                "trend": "SIDEWAYS",
+                "confidence": 0,
+                "strength": 0,
+                "bullish_points": 0,
+                "bearish_points": 0,
+                "bullish_sequence": 0,
+                "bearish_sequence": 0,
+                "reason": "No valid swing labels",
             }
 
-        if lower_high and lower_low:
-            return {
-                "trend": "DOWNTREND",
-                "confidence": 90,
-            }
+        ###############################################
+        # Trend Decision
+        ###############################################
+
+        if bullish > bearish:
+
+            trend = "UPTREND"
+
+            confidence = round((bullish / total) * 100)
+
+            strength = min(
+                100,
+                confidence + (max_bull_sequence * 5),
+            )
+
+            reason = (
+                f"{bullish} bullish vs "
+                f"{bearish} bearish swings"
+            )
+
+        elif bearish > bullish:
+
+            trend = "DOWNTREND"
+
+            confidence = round((bearish / total) * 100)
+
+            strength = min(
+                100,
+                confidence + (max_bear_sequence * 5),
+            )
+
+            reason = (
+                f"{bearish} bearish vs "
+                f"{bullish} bullish swings"
+            )
+
+        else:
+
+            trend = "SIDEWAYS"
+
+            confidence = 50
+
+            strength = 20
+
+            reason = "Balanced bullish and bearish structure"
+
+        ###############################################
+        # Return
+        ###############################################
 
         return {
-            "trend": "SIDEWAYS",
-            "confidence": 50,
+
+            "trend": trend,
+
+            "confidence": confidence,
+
+            "strength": strength,
+
+            "bullish_points": bullish,
+
+            "bearish_points": bearish,
+
+            "bullish_sequence": max_bull_sequence,
+
+            "bearish_sequence": max_bear_sequence,
+
+            "reason": reason,
         }

@@ -1,54 +1,69 @@
 class SignalGrade:
+    """
+    AtlasTrader Signal Grade
 
-    def grade(
-        self,
-        confidence,
-    ):
+    Converts a confidence score (0-100)
+    into a standardized trading grade.
+
+    Returns:
+        grade
+        quality
+        confidence
+    """
+
+    ##########################################################
+
+    def grade(self, confidence):
+
+        ######################################################
+        # Validate Input
+        ######################################################
+
+        try:
+            confidence = float(confidence)
+        except (TypeError, ValueError):
+            confidence = 0.0
+
+        confidence = max(0.0, min(confidence, 100.0))
+
+        ######################################################
+        # Grade Mapping
+        ######################################################
 
         if confidence >= 95:
-
-            return {
-
-                "grade": "A+",
-
-                "quality": "Excellent"
-
-            }
+            grade = "A+"
+            quality = "Excellent"
 
         elif confidence >= 90:
-
-            return {
-
-                "grade": "A",
-
-                "quality": "High"
-
-            }
+            grade = "A"
+            quality = "Very High"
 
         elif confidence >= 80:
-
-            return {
-
-                "grade": "B",
-
-                "quality": "Good"
-
-            }
+            grade = "B+"
+            quality = "High"
 
         elif confidence >= 70:
+            grade = "B"
+            quality = "Good"
 
-            return {
+        elif confidence >= 60:
+            grade = "C"
+            quality = "Average"
 
-                "grade": "C",
+        elif confidence >= 50:
+            grade = "D"
+            quality = "Weak"
 
-                "quality": "Average"
+        else:
+            grade = "F"
+            quality = "Poor"
 
-            }
+        ######################################################
+        # Return
+        ######################################################
 
         return {
-
-            "grade": "D",
-
-            "quality": "Poor"
-
+            "grade": grade,
+            "quality": quality,
+            "confidence": round(confidence, 2),
         }

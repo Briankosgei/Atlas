@@ -1,10 +1,10 @@
+from datetime import datetime
+
 from datafeed.yfinance_feed import YahooFinanceFeed
 
-# Structure Analysis
 from analyzer.market_structure.swings import SwingDetector
 from analyzer.market_structure.classifier import StructureClassifier
 
-# Core Analysis
 from analyzer.trend import TrendEngine
 from analyzer.bos import BOSDetector
 from analyzer.choch import CHOCHDetector
@@ -12,38 +12,48 @@ from analyzer.liquidity import LiquidityDetector
 from analyzer.momentum import MomentumDetector
 from analyzer.confidence import ConfidenceEngine
 
-# Advanced Analysis
 from analyzer.trend_strength import TrendStrength
 from analyzer.volatility_filter import VolatilityFilter
 from analyzer.signal_grade import SignalGrade
 
-# Session / MTF
 from analyzer.session_manager import SessionManager
 from analyzer.mtf_filter import MTFAlignment
 from timeframe.multi_timeframe import MultiTimeframeAnalyzer
 
-# Trading
 from signals.signal_engine import SignalEngine
 from planner.trade_planner import TradePlanner
 from risk.risk_manager import RiskManager
 
 
 class MarketAnalyzer:
+    """
+    AtlasTrader Master Analysis Engine
+
+    Responsibilities
+
+        • Load market data
+        • Build market structure
+        • Detect trend
+        • Detect BOS / CHoCH
+        • Detect liquidity sweeps
+        • Calculate momentum
+        • Run higher timeframe analysis
+        • Calculate confidence
+        • Generate trading signal
+        • Build trade plan
+        • Validate risk
+        • Produce one standardized report
+    """
+
+    MIN_CANDLES = 120
+    MIN_SWINGS = 4
 
     def __init__(self):
 
         self.feed = YahooFinanceFeed()
 
-        ####################################################
-        # MARKET STRUCTURE
-        ####################################################
-
         self.swing_detector = SwingDetector()
         self.classifier = StructureClassifier()
-
-        ####################################################
-        # CORE ANALYSIS
-        ####################################################
 
         self.trend = TrendEngine()
         self.bos = BOSDetector()
@@ -52,34 +62,34 @@ class MarketAnalyzer:
         self.momentum = MomentumDetector()
         self.confidence = ConfidenceEngine()
 
-        ####################################################
-        # ADVANCED ANALYSIS
-        ####################################################
-
         self.trend_strength = TrendStrength()
         self.volatility = VolatilityFilter()
         self.grade = SignalGrade()
 
-        ####################################################
-        # SESSION
-        ####################################################
-
         self.session = SessionManager()
-
-        ####################################################
-        # MULTI TIMEFRAME
-        ####################################################
 
         self.multi_timeframe = MultiTimeframeAnalyzer(self.feed)
         self.mtf_filter = MTFAlignment()
 
-        ####################################################
-        # TRADING
-        ####################################################
-
         self.signal_engine = SignalEngine()
         self.trade_planner = TradePlanner()
         self.risk_manager = RiskManager()
+
+    ###########################################################
+
+    def _error(self, symbol, session, message):
+
+        return {
+
+            "symbol": symbol,
+            "timestamp": datetime.utcnow().isoformat(),
+
+            "session": session,
+
+            "error": message,
+        }
+
+    ###########################################################
 
     def analyze(self, symbol):
 
@@ -87,73 +97,81 @@ class MarketAnalyzer:
 
         try:
 
-            ####################################################
-            # LOAD DATA
-            ####################################################
-
             candles = self.feed.get_candles(symbol)
 
-            if not candles:
-                return {
-                    "symbol": symbol,
-                    "error": f"No market data available for {symbol}",
-                    "session": session,
-                }
+            if candles is None:
 
-            ####################################################
-            # MARKET STRUCTURE
-            ####################################################
+                return self._error(
+                    symbol,
+                    session,
+                    "No market data returned.",
+                )
+
+            if len(candles) < self.MIN_CANDLES:
+
+                return self._error(
+                    symbol,
+                    session,
+                    f"Only {len(candles)} candles available.",
+                )
+
+            current_price = candles[-1]["close"]
 
             swings = self.swing_detector.find_swings(candles)
-            structure = self.classifier.classify(swings)
 
-            ####################################################
-            # TREND
-            ####################################################
+            if len(swings) < self.MIN_SWINGS:
+
+                return self._error(
+                    symbol,
+                    session,
+                    "Insufficient swing points.",
+                )
+
+            structure = self.classifier.classify(swings)
 
             trend = self.trend.detect_trend(structure)
 
-            ####################################################
-            # BOS / CHOCH
-            ####################################################
-
             bos = self.bos.detect(structure)
-            choch = self.choch.detect(structure)
 
-            ####################################################
-            # LIQUIDITY
-            ####################################################
+            choch = self.choch.detect(structure)
 
             liquidity = self.liquidity.detect(
                 candles,
                 structure,
             )
 
-            ####################################################
-            # MOMENTUM
-            ####################################################
-
             momentum = self.momentum.detect(candles)
-
-            ####################################################
-            # MULTI TIMEFRAME
-            ####################################################
 
             mtf = self.multi_timeframe.analyze(symbol)
 
             alignment = self.mtf_filter.check(mtf)
 
-            ####################################################
-            # VOLATILITY
-            ####################################################
-
-            volatility = self.volatility.check(candles)
-
-            ####################################################
-            # CONFIDENCE
-            ####################################################
+            volatility = self.volatility.check(
+                candles,
+                symbol,
+            )
 
             confidence = self.confidence.calculate(
+                trend,
+                bos,
+                choch,
+                liquidity,
+                momentum,
+                alignment,
+                volatility,
+            )
+
+            strength = self.trend_strength.calculate(
+                trend=trend,
+                bos=bos,
+                choch=choch,
+                momentum=momentum,
+                alignment=alignment,
+                liquidity=liquidity,
+                volatility=volatility,
+            )
+
+            signal = self.signal_engine.generate(
                 trend=trend,
                 bos=bos,
                 choch=choch,
@@ -163,74 +181,33 @@ class MarketAnalyzer:
                 volatility=volatility,
             )
 
-            ####################################################
-            # TREND STRENGTH
-            ####################################################
-
-            trend_strength = self.trend_strength.calculate(
-                trend=trend,
-                bos=bos,
-                choch=choch,
-                momentum=momentum,
-                alignment=alignment,
-                liquidity=liquidity,
-            )
-
-            ####################################################
-            # SIGNAL
-            ####################################################
-
-            signal = self.signal_engine.generate(
-                trend=trend,
-                bos=bos,
-                choch=choch,
-                liquidity=liquidity,
-                momentum=momentum,
-                alignment=alignment,
-            )
-
-            ####################################################
-            # TRADE PLAN
-            ####################################################
-
-            current_price = candles[-1]["close"]
-
             trade = self.trade_planner.plan_trade(
                 direction=signal["signal"],
                 entry=current_price,
                 candles=candles,
+                confidence=confidence,
             )
-
-            ####################################################
-            # RISK
-            ####################################################
 
             risk = self.risk_manager.evaluate(
                 symbol=symbol,
                 trade=trade,
             )
 
-            ####################################################
-            # GRADE
-            ####################################################
-
-            grade = self.grade.grade(confidence)
-
-            ####################################################
-            # REPORT
-            ####################################################
+            grade = self.grade.grade(confidence["score"])
 
             return {
 
                 "symbol": symbol,
 
+                "timestamp": datetime.utcnow().isoformat(),
+
                 "price": current_price,
 
                 "session": session,
 
-                "mtf": mtf,
+                "candles": len(candles),
 
-                "alignment": alignment,
+                "swings": len(swings),
 
                 "structure": structure,
 
@@ -244,14 +221,18 @@ class MarketAnalyzer:
 
                 "momentum": momentum,
 
+                "mtf": mtf,
+
+                "alignment": alignment,
+
                 "volatility": volatility,
 
                 "confidence": confidence,
 
-                "trend_strength": trend_strength,
+                "trend_strength": strength,
 
                 "grade": grade,
-                
+
                 "signal": signal,
 
                 "trade": trade,
@@ -259,15 +240,14 @@ class MarketAnalyzer:
                 "risk": risk,
             }
 
-        except Exception as e:
+        except Exception as exc:
+
             import traceback
+
             traceback.print_exc()
 
-            return {
-
-                "symbol": symbol,
-
-                "error": str(e),
-
-                "session": session,
-            }
+            return self._error(
+                symbol,
+                session,
+                str(exc),
+            )
