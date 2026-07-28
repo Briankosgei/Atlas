@@ -12,20 +12,7 @@ class MultiTimeframeAnalyzer:
     """
     AtlasTrader Multi-Timeframe Analyzer
 
-    Performs complete higher-timeframe analysis.
-
-    Each timeframe returns:
-
-        • Trend
-        • BOS
-        • CHoCH
-        • Liquidity
-        • Momentum
-        • Structure
-        • Swing Count
-
-    The result is consumed by the
-    MTF Alignment Engine.
+    Performs complete analysis for higher timeframes.
     """
 
     DEFAULT_TIMEFRAMES = [
@@ -36,6 +23,7 @@ class MultiTimeframeAnalyzer:
     ]
 
     MINIMUM_CANDLES = 50
+    MINIMUM_SWINGS = 4
 
     def __init__(self, feed, timeframes=None):
 
@@ -48,7 +36,7 @@ class MultiTimeframeAnalyzer:
         self.bos_detector = BOSDetector()
         self.choch_detector = CHOCHDetector()
         self.liquidity_detector = LiquidityDetector()
-        self.momentum_engine = MomentumDetector()
+        self.momentum_detector = MomentumDetector()
 
         self.timeframes = (
             timeframes
@@ -56,9 +44,9 @@ class MultiTimeframeAnalyzer:
             else self.DEFAULT_TIMEFRAMES
         )
 
-    ##############################################################
+    ############################################################
 
-    def _empty_result(self, reason="Unavailable"):
+    def _empty_result(self, reason):
 
         return {
 
@@ -87,14 +75,14 @@ class MultiTimeframeAnalyzer:
                 "score": 0,
             },
 
-            "structure": [],
+            "structure": {},
 
             "swings": 0,
 
             "reason": reason,
         }
 
-    ##############################################################
+    ############################################################
 
     def analyze(self, symbol):
 
@@ -109,55 +97,56 @@ class MultiTimeframeAnalyzer:
                     interval=timeframe,
                 )
 
-                if (
-                    candles is None
-                    or len(candles) < self.MINIMUM_CANDLES
-                ):
+                if not candles:
 
                     results[timeframe] = self._empty_result(
-                        "Not enough candles"
+                        "No candles returned"
                     )
-
                     continue
 
-                ##################################################
+                if len(candles) < self.MINIMUM_CANDLES:
+
+                    results[timeframe] = self._empty_result(
+                        f"Only {len(candles)} candles"
+                    )
+                    continue
+
+                ####################################################
                 # Market Structure
-                ##################################################
+                ####################################################
 
-                swings = self.swing_detector.find_swings(
-                    candles
-                )
+                swings = self.swing_detector.find_swings(candles)
 
-                structure = self.classifier.classify(
-                    swings
-                )
+                if len(swings) < self.MINIMUM_SWINGS:
 
-                ##################################################
-                # Analysis Modules
-                ##################################################
+                    results[timeframe] = self._empty_result(
+                        "Insufficient swing points"
+                    )
+                    continue
 
-                trend = self.trend_engine.detect_trend(
-                    structure
-                )
+                structure = self.classifier.classify(swings)
 
-                bos = self.bos_detector.detect(
-                    structure
-                )
+                ####################################################
+                # Analysis
+                ####################################################
 
-                choch = self.choch_detector.detect(
-                    structure
-                )
+                trend = self.trend_engine.detect_trend(structure)
+
+                bos = self.bos_detector.detect(structure)
+
+                choch = self.choch_detector.detect(structure)
 
                 liquidity = self.liquidity_detector.detect(
                     candles,
                     structure,
                 )
 
-                momentum = self.momentum_engine.calculate(
+                # FIX: detect(), not calculate()
+                momentum = self.momentum_detector.detect(
                     candles
                 )
 
-                ##################################################
+                ####################################################
 
                 results[timeframe] = {
 
@@ -174,6 +163,8 @@ class MultiTimeframeAnalyzer:
                     "structure": structure,
 
                     "swings": len(swings),
+
+                    "reason": "OK",
                 }
 
             except Exception as e:

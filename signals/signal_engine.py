@@ -2,30 +2,13 @@ class SignalEngine:
     """
     AtlasTrader Institutional Signal Engine
 
-    Decision hierarchy:
+    Produces BUY, SELL or WAIT using weighted scoring.
 
-        1. Trend
-        2. Higher Timeframe Alignment
-        3. BOS
-        4. CHoCH
-        5. Liquidity
-        6. Momentum
-        7. Volatility
-
-    Outputs:
-
-        BUY
-        SELL
-        WAIT
-
-    Along with:
-
-        Score
-        Reasons
-        Conflicts
-        Risk Level
-        Confidence
+    BUY and SELL are scored independently, then compared.
     """
+
+    BUY_THRESHOLD = 60
+    SELL_THRESHOLD = 60
 
     def generate(
         self,
@@ -38,272 +21,172 @@ class SignalEngine:
         volatility,
     ):
 
+        buy_score = 0
+        sell_score = 0
+
         reasons = []
         conflicts = []
 
-        score = 0
+        ###########################################################
+        # Volatility Filter
+        ###########################################################
 
-        signal = "WAIT"
-
-        ############################################################
-        # Extract Values
-        ############################################################
-
-        trend_direction = trend.get("trend", "SIDEWAYS")
-
-        htf_direction = alignment.get("direction", "WAIT")
-
-        momentum_strength = momentum.get(
-            "strength",
-            "WEAK",
-        ).upper()
-
-        trade_allowed = volatility.get(
-            "tradable",
-            True,
-        )
-
-        ############################################################
-        # 1. Volatility Filter
-        ############################################################
-
-        if not trade_allowed:
+        if not volatility.get("tradable", True):
 
             return {
-
                 "signal": "WAIT",
-
                 "score": 0,
-
                 "confidence": 0,
-
                 "risk": "HIGH",
-
                 "reasons": [
                     volatility.get(
                         "reason",
-                        "Volatility filter rejected trade",
+                        "Volatility filter rejected trade."
                     )
                 ],
-
                 "conflicts": [],
             }
 
-        ############################################################
-        # 2. Sideways Market
-        ############################################################
+        ###########################################################
+        # Trend
+        ###########################################################
 
-        if trend_direction == "SIDEWAYS":
-
-            return {
-
-                "signal": "WAIT",
-
-                "score": 5,
-
-                "confidence": 5,
-
-                "risk": "HIGH",
-
-                "reasons": [
-                    "Market is sideways"
-                ],
-
-                "conflicts": [],
-            }
-
-        ############################################################
-        # 3. Trend
-        ############################################################
+        trend_direction = trend.get("trend", "SIDEWAYS")
 
         if trend_direction == "UPTREND":
-
-            signal = "BUY"
-
-            score += 30
-
+            buy_score += 30
             reasons.append("Uptrend")
 
         elif trend_direction == "DOWNTREND":
-
-            signal = "SELL"
-
-            score += 30
-
+            sell_score += 30
             reasons.append("Downtrend")
 
-        ############################################################
-        # 4. Higher Timeframe Alignment
-        ############################################################
-
-        if htf_direction == "WAIT":
-
-            conflicts.append(
-                "Higher timeframe not aligned"
-            )
-
-        elif htf_direction == signal:
-
-            score += 20
-
-            reasons.append(
-                "Higher timeframe aligned"
-            )
-
         else:
+            reasons.append("Sideways market")
 
-            conflicts.append(
-                "Trend conflicts with Higher Timeframe"
-            )
-
-            score -= 25
-
-        ############################################################
-        # 5. BOS
-        ############################################################
+        ###########################################################
+        # BOS
+        ###########################################################
 
         if bos.get("bos"):
 
-            if bos.get("direction") == signal:
+            if bos.get("direction") == "BUY":
+                buy_score += 20
+                reasons.append("Bullish BOS")
 
-                score += 20
+            elif bos.get("direction") == "SELL":
+                sell_score += 20
+                reasons.append("Bearish BOS")
 
-                reasons.append(
-                    "Break of Structure"
-                )
-
-            else:
-
-                conflicts.append(
-                    "BOS opposes trend"
-                )
-
-                score -= 15
-
-        ############################################################
-        # 6. CHoCH
-        ############################################################
+        ###########################################################
+        # CHoCH
+        ###########################################################
 
         if choch.get("choch"):
 
-            if choch.get("direction") == signal:
+            if choch.get("direction") == "BUY":
+                buy_score += 15
+                reasons.append("Bullish CHoCH")
 
-                score += 10
+            elif choch.get("direction") == "SELL":
+                sell_score += 15
+                reasons.append("Bearish CHoCH")
 
-                reasons.append(
-                    "Change of Character"
-                )
-
-            else:
-
-                conflicts.append(
-                    "CHoCH opposes trend"
-                )
-
-                score -= 10
-
-        ############################################################
-        # 7. Liquidity
-        ############################################################
+        ###########################################################
+        # Liquidity
+        ###########################################################
 
         if liquidity.get("sweep"):
 
-            if liquidity.get("direction") == signal:
+            if liquidity.get("direction") == "BUY":
+                buy_score += 10
+                reasons.append("Bullish liquidity sweep")
 
-                score += 10
+            elif liquidity.get("direction") == "SELL":
+                sell_score += 10
+                reasons.append("Bearish liquidity sweep")
 
-                reasons.append(
-                    "Liquidity Sweep"
-                )
+        ###########################################################
+        # Momentum
+        ###########################################################
 
-            else:
+        strength = momentum.get("strength", "WEAK").upper()
 
-                conflicts.append(
-                    "Liquidity against signal"
-                )
+        if strength == "STRONG":
+            buy_score += 20
+            sell_score += 20
+            reasons.append("Strong momentum")
 
-                score -= 10
-
-        ############################################################
-        # 8. Momentum
-        ############################################################
-
-        if momentum_strength == "STRONG":
-
-            score += 15
-
-            reasons.append(
-                "Strong Momentum"
-            )
-
-        elif momentum_strength == "MODERATE":
-
-            score += 8
-
-            reasons.append(
-                "Moderate Momentum"
-            )
+        elif strength == "MODERATE":
+            buy_score += 10
+            sell_score += 10
+            reasons.append("Moderate momentum")
 
         else:
+            conflicts.append("Weak momentum")
 
-            conflicts.append(
-                "Weak Momentum"
-            )
+        ###########################################################
+        # Higher Timeframe Alignment
+        ###########################################################
 
-        ############################################################
-        # Clamp Score
-        ############################################################
+        htf = alignment.get("direction", "WAIT")
 
-        score = max(
-            0,
-            min(score, 100)
-        )
+        if htf == "BUY":
+            buy_score += 15
+            reasons.append("HTF BUY alignment")
 
-        ############################################################
-        # Confidence
-        ############################################################
+        elif htf == "SELL":
+            sell_score += 15
+            reasons.append("HTF SELL alignment")
 
-        confidence = score
+        else:
+            conflicts.append("No HTF alignment")
 
-        ############################################################
-        # Risk Level
-        ############################################################
+        ###########################################################
+        # Clamp
+        ###########################################################
+
+        buy_score = max(0, min(100, buy_score))
+        sell_score = max(0, min(100, sell_score))
+
+        ###########################################################
+        # Final Decision
+        ###########################################################
+
+        signal = "WAIT"
+        confidence = max(buy_score, sell_score)
+        score = confidence
+
+        if buy_score >= self.BUY_THRESHOLD and buy_score > sell_score:
+            signal = "BUY"
+
+        elif sell_score >= self.SELL_THRESHOLD and sell_score > buy_score:
+            signal = "SELL"
+
+        ###########################################################
+        # Risk
+        ###########################################################
 
         if confidence >= 85:
-
             risk = "LOW"
 
         elif confidence >= 70:
-
             risk = "MEDIUM"
 
         else:
-
             risk = "HIGH"
 
-        ############################################################
-        # Final Decision
-        ############################################################
-
-        if confidence < 70:
-
-            signal = "WAIT"
-
-        ############################################################
+        ###########################################################
         # Return
-        ############################################################
+        ###########################################################
 
         return {
-
             "signal": signal,
-
             "score": score,
-
             "confidence": confidence,
-
             "risk": risk,
-
+            "buy_score": buy_score,
+            "sell_score": sell_score,
             "reasons": reasons,
-
             "conflicts": conflicts,
         }

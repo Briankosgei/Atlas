@@ -47,3 +47,12 @@ time,symbol,signal,entry,stop_loss,take_profit,confidence,alignment,status
 2026-07-22 12:32:13,AUDUSD,SELL,0.70003,0.7009,0.69743,46,BUY,OPEN
 2026-07-23 12:48:33,BTCUSD,SELL,65673.9,66279.42,64462.85,64,WAIT,OPEN
 2026-07-23 12:48:36,USDCAD,SELL,1.40799,1.40976,1.40446,66,SELL,OPEN
+2026-07-28 09:33:45,USDJPY,BUY,163.705,163.585,163.946,"{'score': 70, 'label': 'Strong', 'breakdown': {'trend': 20.75, 'bos': 20, 'choch': 0, 'liquidity': 0, 'momentum': 4.0, 'alignment': 15.0, 'volatility': 10}}",BUY,OPEN
+2026-07-28 09:33:46,BTCUSD,SELL,63444.66,64903.5,60526.98,"{'score': 65, 'label': 'Good', 'breakdown': {'trend': 16.75, 'bos': 20, 'choch': 0, 'liquidity': 0, 'momentum': 10, 'alignment': 8.4, 'volatility': 10}}",SELL,OPEN
+2026-07-28 09:33:49,AUDUSD,SELL,0.69735,0.69984,0.69237,"{'score': 63, 'label': 'Good', 'breakdown': {'trend': 20.75, 'bos': 20, 'choch': 0, 'liquidity': 0, 'momentum': 4.0, 'alignment': 8.4, 'volatility': 10}}",SELL,OPEN
+2026-07-28 09:33:49,USDCAD,BUY,1.41151,1.40988,1.41478,"{'score': 59, 'label': 'Moderate', 'breakdown': {'trend': 16.75, 'bos': 20, 'choch': 0, 'liquidity': 0, 'momentum': 4.0, 'alignment': 8.4, 'volatility': 10}}",BUY,OPEN
+2026-07-28 15:40:40,USDJPY,BUY,163.881,163.662,164.319,"{'score': 70, 'label': 'Strong', 'breakdown': {'trend': 20.75, 'bos': 20, 'choch': 0, 'liquidity': 0, 'momentum': 4.0, 'alignment': 15.0, 'volatility': 10}}",BUY,OPEN
+2026-07-28 15:40:40,BTCUSD,SELL,63370.48,63739.66,62632.12,"{'score': 69, 'label': 'Good', 'breakdown': {'trend': 16.75, 'bos': 20, 'choch': 10, 'liquidity': 0, 'momentum': 4.0, 'alignment': 8.4, 'volatility': 10}}",SELL,OPEN
+2026-07-28 15:40:40,EURUSD,SELL,1.13662,1.1383,1.13326,"{'score': 70, 'label': 'Strong', 'breakdown': {'trend': 20.75, 'bos': 20, 'choch': 0, 'liquidity': 0, 'momentum': 4.0, 'alignment': 15.0, 'volatility': 10}}",SELL,OPEN
+2026-07-28 15:40:43,AUDUSD,SELL,0.69691,0.69964,0.69145,"{'score': 63, 'label': 'Good', 'breakdown': {'trend': 20.75, 'bos': 20, 'choch': 0, 'liquidity': 0, 'momentum': 4.0, 'alignment': 8.4, 'volatility': 10}}",SELL,OPEN
+2026-07-28 15:40:44,USDCAD,BUY,1.4116,1.40963,1.41553,"{'score': 72, 'label': 'Strong', 'breakdown': {'trend': 16.75, 'bos': 20, 'choch': 10, 'liquidity': 3.0, 'momentum': 4.0, 'alignment': 8.4, 'volatility': 10}}",BUY,OPEN

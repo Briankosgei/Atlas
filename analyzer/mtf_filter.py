@@ -1,45 +1,18 @@
 class MTFAlignment:
     """
-    AtlasTrader Multi-Timeframe Alignment Engine
+    AtlasTrader Multi-Timeframe Alignment
 
-    Determines the dominant higher timeframe trend using weighted voting.
+    Combines trends from multiple timeframes using weighted voting.
 
-    Supported timeframes
-    --------------------
-    15m : 1
-    1H  : 2
-    4H  : 3
-    1D  : 4
-    1W  : 5
+    Supports multiple analyzer formats.
 
-    Returns
-    -------
-    direction
-        BUY / SELL / WAIT
+    Accepted values:
 
-    score
-        Winning weighted score
+        trend -> UPTREND / DOWNTREND / SIDEWAYS
 
-    total
-        Total weighted score
+        direction -> BUY / SELL / WAIT
 
-    confidence
-        Percentage agreement
-
-    agreement
-        Percentage of higher timeframes agreeing
-
-    majority
-        BUY / SELL / NONE
-
-    aligned
-        True / False
-
-    conflicts
-        List of conflicting timeframes
-
-    breakdown
-        Trend per timeframe
+    Returns a standardized alignment report.
     """
 
     WEIGHTS = {
@@ -48,146 +21,194 @@ class MTFAlignment:
         "1h": 2,
         "4h": 3,
         "1d": 4,
-        "1wk": 5,
         "1w": 5,
+        "1wk": 5,
     }
+
+    ############################################################
+
+    def _extract_trend(self, analysis):
+        """
+        Supports multiple analyzer outputs.
+        """
+
+        if not isinstance(analysis, dict):
+            return "SIDEWAYS"
+
+        # format:
+        # {"trend":{"trend":"UPTREND"}}
+
+        if isinstance(analysis.get("trend"), dict):
+
+            t = analysis["trend"].get("trend")
+
+            if t:
+                return t.upper()
+
+            d = analysis["trend"].get("direction")
+
+            if d == "BUY":
+                return "UPTREND"
+
+            if d == "SELL":
+                return "DOWNTREND"
+
+        # format:
+        # {"trend":"UPTREND"}
+
+        t = analysis.get("trend")
+
+        if isinstance(t, str):
+
+            t = t.upper()
+
+            if t in (
+                "UPTREND",
+                "DOWNTREND",
+                "SIDEWAYS",
+            ):
+                return t
+
+        # format:
+        # {"direction":"BUY"}
+
+        d = analysis.get("direction")
+
+        if d == "BUY":
+            return "UPTREND"
+
+        if d == "SELL":
+            return "DOWNTREND"
+
+        return "SIDEWAYS"
+
+    ############################################################
 
     def check(self, mtf):
 
         if not mtf:
+
             return {
+
                 "direction": "WAIT",
+
                 "majority": "NONE",
+
                 "score": 0,
+
                 "total": 0,
+
                 "confidence": 0,
+
                 "agreement": 0,
+
                 "aligned": False,
+
                 "conflicts": [],
+
                 "breakdown": {},
             }
 
-        buy_weight = 0
-        sell_weight = 0
-        total_weight = 0
+        buy = 0
+        sell = 0
+        total = 0
 
         breakdown = {}
 
-        for timeframe, analysis in mtf.items():
+        for tf, analysis in mtf.items():
 
-            weight = self.WEIGHTS.get(
-                timeframe.lower(),
-                1,
-            )
+            trend = self._extract_trend(analysis)
 
-            trend = (
-                analysis
-                .get("trend", {})
-                .get("trend", "SIDEWAYS")
-            )
+            breakdown[tf] = trend
 
-            breakdown[timeframe] = trend
+            weight = self.WEIGHTS.get(tf.lower(), 1)
 
             if trend == "UPTREND":
 
-                buy_weight += weight
-                total_weight += weight
+                buy += weight
+                total += weight
 
             elif trend == "DOWNTREND":
 
-                sell_weight += weight
-                total_weight += weight
+                sell += weight
+                total += weight
 
-        if total_weight == 0:
+        if total == 0:
 
             return {
+
                 "direction": "WAIT",
+
                 "majority": "NONE",
+
                 "score": 0,
+
                 "total": 0,
+
                 "confidence": 0,
+
                 "agreement": 0,
+
                 "aligned": False,
+
                 "conflicts": [],
+
                 "breakdown": breakdown,
             }
 
-        #######################################################
-        # Majority Direction
-        #######################################################
-
-        if buy_weight > sell_weight:
+        if buy > sell:
 
             direction = "BUY"
-            majority = "BUY"
-            score = buy_weight
+            score = buy
 
-        elif sell_weight > buy_weight:
+        elif sell > buy:
 
             direction = "SELL"
-            majority = "SELL"
-            score = sell_weight
+            score = sell
 
         else:
 
             direction = "WAIT"
-            majority = "NONE"
-            score = max(buy_weight, sell_weight)
+            score = max(buy, sell)
 
-        #######################################################
-        # Agreement %
-        #######################################################
+        confidence = round((score / total) * 100)
 
-        confidence = round(
-            (score / total_weight) * 100
-        )
-
-        agreement = confidence
-
-        #######################################################
-        # Conflicting Timeframes
-        #######################################################
+        aligned = confidence >= 60
 
         conflicts = []
 
-        if majority != "NONE":
+        expected = (
+            "UPTREND"
+            if direction == "BUY"
+            else "DOWNTREND"
+        )
 
-            expected = (
-                "UPTREND"
-                if majority == "BUY"
-                else "DOWNTREND"
-            )
+        if direction != "WAIT":
 
             for tf, trend in breakdown.items():
 
-                if trend != expected:
-
+                if trend not in (
+                    expected,
+                    "SIDEWAYS",
+                ):
                     conflicts.append({
                         "timeframe": tf,
                         "trend": trend,
                     })
 
-        #######################################################
-        # Alignment Quality
-        #######################################################
-
-        aligned = confidence >= 70
-
-        #######################################################
-
         return {
 
             "direction": direction,
 
-            "majority": majority,
+            "majority": direction if direction != "WAIT" else "NONE",
 
             "score": score,
 
-            "total": total_weight,
+            "total": total,
 
             "confidence": confidence,
 
-            "agreement": agreement,
+            "agreement": confidence,
 
             "aligned": aligned,
 

@@ -1,66 +1,39 @@
-import streamlit as st
 import plotly.express as px
+import pandas as pd
+import streamlit as st
 
 
-def show_performance_charts(df):
+def render_confidence_breakdown(report):
 
-    st.markdown("---")
+    confidence = report.get("confidence", {})
 
-    st.markdown("""
-# 📈 Performance Analytics
+    breakdown = confidence.get("breakdown", {})
 
-Trade distribution and confidence analysis.
+    if not breakdown:
+        st.info("No confidence breakdown available.")
+        return
 
----
-""")
+    df = pd.DataFrame({
+        "Factor": list(breakdown.keys()),
+        "Score": list(breakdown.values()),
+    })
 
-    left, right = st.columns(2)
-
-    fig1 = px.pie(
+    fig = px.bar(
         df,
-        names="signal",
-        title="BUY vs SELL Distribution",
+        x="Factor",
+        y="Score",
+        text="Score",
     )
 
-    left.plotly_chart(
-        fig1,
-        use_container_width=True,
-    )
-
-    fig2 = px.histogram(
-        df,
-        x="confidence",
-        nbins=10,
-        title="Confidence Distribution",
-    )
-
-    right.plotly_chart(
-        fig2,
-        use_container_width=True,
-    )
-
-    st.markdown("---")
-
-    alignment_counts = (
-        df["alignment"]
-        .value_counts()
-        .reset_index()
-    )
-
-    alignment_counts.columns = [
-        "alignment",
-        "count",
-    ]
-
-    fig3 = px.bar(
-        alignment_counts,
-        x="alignment",
-        y="count",
-        color="alignment",
-        title="Higher Timeframe Alignment Distribution",
+    fig.update_layout(
+        template="plotly_dark",
+        height=320,
+        margin=dict(l=10, r=10, t=20, b=10),
+        xaxis_title="",
+        yaxis_title="",
     )
 
     st.plotly_chart(
-        fig3,
+        fig,
         use_container_width=True,
     )

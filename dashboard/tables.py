@@ -1,80 +1,27 @@
-import os
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 
-def show_signal_summary(scan_results):
+def render_scanner_table(reports):
 
-    if not scan_results:
-        return
+    rows = []
 
-    st.markdown("---")
-    st.header("📋 Live Signal Summary")
+    for r in reports:
 
-    table = []
-
-    for report in scan_results:
-
-        table.append({
-
-            "Symbol": report["symbol"],
-            "Signal": report["signal"]["signal"],
-            "Trend": report["trend"]["trend"],
-            "Confidence": report["confidence"],
-            "Alignment": report["alignment"]["direction"],
-            "Momentum": report["momentum"]["strength"]
-
+        rows.append({
+            "Symbol": r["symbol"],
+            "Price": round(r["price"], 5),
+            "Trend": r["trend"]["trend"],
+            "HTF": r["alignment"]["direction"],
+            "Confidence": f"{r['confidence_score']}%",
+            "Signal": r["signal"]["signal"],
+            "Grade": r["grade"]["grade"],
         })
 
-    df_signals = pd.DataFrame(table)
-
-    df_signals = df_signals.sort_values(
-        by="Confidence",
-        ascending=False
-    )
-
-    st.dataframe(
-        df_signals,
-        use_container_width=True,
-        hide_index=True,
-    )
-
-
-def show_trade_journal(journal_file):
-
-    st.markdown("---")
-
-    st.markdown("""
-# 📒 Trade Journal
-
-All executed trade plans are recorded here.
-
----
-""")
-
-    if not os.path.exists(journal_file):
-
-        st.info("No journal entries found.")
-        return
-
-    df = pd.read_csv(journal_file)
-
-    df = df.sort_values(
-        "time",
-        ascending=False
-    )
+    df = pd.DataFrame(rows)
 
     st.dataframe(
         df,
         use_container_width=True,
         hide_index=True,
     )
-
-    st.download_button(
-        "⬇ Download Journal CSV",
-        df.to_csv(index=False),
-        file_name="AtlasTrader_Journal.csv",
-        mime="text/csv",
-    )
-
-    return df

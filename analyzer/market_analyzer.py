@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from datafeed.yfinance_feed import YahooFinanceFeed
 
@@ -161,6 +161,11 @@ class MarketAnalyzer:
                 volatility,
             )
 
+            if isinstance(confidence, dict):
+                confidence_score = confidence.get("score", 0)
+            else:
+                confidence_score = confidence
+
             strength = self.trend_strength.calculate(
                 trend=trend,
                 bos=bos,
@@ -185,7 +190,7 @@ class MarketAnalyzer:
                 direction=signal["signal"],
                 entry=current_price,
                 candles=candles,
-                confidence=confidence,
+                confidence=confidence_score,
             )
 
             risk = self.risk_manager.evaluate(
@@ -193,13 +198,13 @@ class MarketAnalyzer:
                 trade=trade,
             )
 
-            grade = self.grade.grade(confidence["score"])
+            grade = self.grade.grade(confidence_score)
 
             return {
 
                 "symbol": symbol,
 
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
 
                 "price": current_price,
 
@@ -228,6 +233,8 @@ class MarketAnalyzer:
                 "volatility": volatility,
 
                 "confidence": confidence,
+
+                "confidence_score": confidence_score,
 
                 "trend_strength": strength,
 
